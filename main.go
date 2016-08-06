@@ -45,6 +45,21 @@ func main() {
 	}
 }
 
+func sortOpts(opts map[string]interface{}) string {
+	res := bytes.Buffer{}
+	var keys []string
+	for key := range opts {
+		keys = append(keys, key)
+	}
+	for i, key := range keys {
+		if i != 0 {
+			res.WriteString(" ")
+		}
+		res.WriteString(fmt.Sprintf("%s=%v", key, opts[key]))
+	}
+	return res.String()
+}
+
 func repo(opts map[string]interface{}) todo.Repo {
 	path, _ := opts["-r"].(string)
 	if path == "" {
@@ -88,19 +103,24 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 		}
 		fmt.Println("Created ", task)
 	}
-}
-
-func sortOpts(opts map[string]interface{}) string {
-	res := bytes.Buffer{}
-	var keys []string
-	for key := range opts {
-		keys = append(keys, key)
-	}
-	for i, key := range keys {
-		if i != 0 {
-			res.WriteString(" ")
+	if opts["update"].(bool) {
+		id := opts["<id>"].(string)
+		if !todo.StateValid(opts["<state>"].(string)) {
+			log.Debug("Invalid state ", opts["<state>"].(string))
 		}
-		res.WriteString(fmt.Sprintf("%s=%v", key, opts[key]))
+		state := todo.StateFrom(opts["<state>"].(string))
+		task, err := r.Get(id)
+		if err != nil {
+			log.Error("Could not find task ", err.Error())
+			log.Debugf("%+v", err)
+			return
+		}
+		task.State = state
+		err = r.Update(task)
+		if err != nil {
+			log.Error("Could not update task ", err.Error())
+			log.Debugf("%+v", err)
+			return
+		}
 	}
-	return res.String()
 }

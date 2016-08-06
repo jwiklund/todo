@@ -16,9 +16,36 @@ var (
 	log = logrus.WithField("comp", "todo")
 )
 
+// State valid state, one of "todo", "doing", "waiting", done"
+type State string
+
+func (s State) String() string {
+    return string(s)
+}
+
+// StateValid check if state is a valid state
+func StateValid(state string) bool {
+    return state == StateFrom(state).String()
+}
+// StateFrom returns a valid state from a given string (or todo)
+func StateFrom(state string) State {
+    switch state {
+        case "todo":
+            return State(state)
+        case "doing":
+            return State(state)
+        case "waiting":
+            return State(state)
+        case "done":
+            return State(state)
+    }
+    return "todo"
+}
+
 // Task a todo task
 type Task struct {
 	ID      string
+	State   State
 	Message string
 }
 
@@ -28,7 +55,7 @@ func (t Task) String() string {
 
 // IsCurrent return true if task is not waiting or archived
 func (t Task) IsCurrent() bool {
-	return true
+	return t.State == "todo" || t.State == "doing"
 }
 
 // Repo a todo repository
@@ -36,6 +63,8 @@ type Repo interface {
 	Close() error
 	List() ([]Task, error)
 	Add(string) (Task, error)
+	Get(string) (Task, error)
+	Update(Task) error
 }
 
 // RepoFromPath Return a repository stored in path
@@ -51,7 +80,7 @@ func RepoFromPath(path string) (Repo, error) {
 		return nil, errors.New(err.Error())
 	}
 
-	_, err = db.Exec(`create table if not exists todo(id text primary key, message text)`)
+	_, err = db.Exec(`create table if not exists todo(id text primary key, state text, message text)`)
 	if err != nil {
 		db.Close()
 		return nil, errors.New(err.Error())
@@ -90,21 +119,24 @@ func (d *dbRepo) Close() error {
 }
 
 func (d *dbRepo) List() ([]Task, error) {
-	rows, err := d.db.Query("select rowid, message from todo")
+	rows, err := d.db.Query("select rowid, state, message from todo where state != 'done'")
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
 	defer rows.Close()
 	var message string
+	var state string
 	var rowid int64
 	var tasks []Task
 	for rows.Next() {
-		err = rows.Scan(&rowid, &message)
+		err = rows.Scan(&rowid, &state, &message)
 		if err != nil {
 			return nil, errors.New(err.Error())
 		}
+        log.Debugf("raw id=%v,state=%s,message=%s", rowid, state, message)
 		tasks = append(tasks, Task{
 			ID:      strconv.FormatInt(rowid, 10),
+			State:   StateFrom(state),
 			Message: message,
 		})
 	}
@@ -112,7 +144,7 @@ func (d *dbRepo) List() ([]Task, error) {
 }
 
 func (d *dbRepo) Add(message string) (Task, error) {
-	r, err := d.db.Exec("insert into todo(message) values (?)", message)
+	r, err := d.db.Exec("insert into todo(state, message) values (?, ?)", "todo", message)
 	if err != nil {
 		return Task{}, errors.New(err.Error())
 	}
@@ -122,6 +154,41 @@ func (d *dbRepo) Add(message string) (Task, error) {
 	}
 	return Task{
 		ID:      strconv.FormatInt(id, 10),
+		State:   "todo",
 		Message: message,
 	}, nil
+}
+
+func (d *dbRepo) Get(id string) (Task, error) {
+	rows, err := d.db.Query("select rowid, state, message from todo where rowid = ?", id)
+	if err != nil {
+		return Task{}, errors.New(err.Error())
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var id int64
+		var state string
+		var message string
+		err = rows.Scan(&id, &state, &message)
+		if err != nil {
+			return Task{}, errors.New(err.Error())
+		}
+		return Task{
+			ID:      strconv.FormatInt(id, 10),
+			State:   StateFrom(state),
+			Message: message,
+		}, nil
+	}
+	return Task{}, errors.New("Task not found")
+}
+
+func (d *dbRepo) Update(t Task) error {
+	r, err := d.db.Exec("update todo set state = ?, message = ? where rowid = ?", t.State.String(), t.Message, t.ID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	if rows, _ := r.RowsAffected(); rows != 1 {
+		return errors.New("Update failed, no rows affected")
+	}
+	return nil
 }
