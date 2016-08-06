@@ -18,12 +18,12 @@ var (
 
 // Task a todo task
 type Task struct {
-	Id      string
+	ID      string
 	Message string
 }
 
 func (t Task) String() string {
-	return t.Message
+	return "(" + t.ID + ")\t" + t.Message
 }
 
 // IsCurrent return true if task is not waiting or archived
@@ -104,7 +104,7 @@ func (d *dbRepo) List() ([]Task, error) {
 			return nil, errors.New(err.Error())
 		}
 		tasks = append(tasks, Task{
-			Id:      strconv.FormatInt(rowid, 10),
+			ID:      strconv.FormatInt(rowid, 10),
 			Message: message,
 		})
 	}
@@ -121,7 +121,7 @@ func (d *dbRepo) Add(message string) (Task, error) {
 		return Task{}, errors.New(err.Error())
 	}
 	return Task{
-		Id:      strconv.FormatInt(id, 10),
+		ID:      strconv.FormatInt(id, 10),
 		Message: message,
 	}, nil
 }

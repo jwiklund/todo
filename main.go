@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-
+	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Sirupsen/logrus"
 	opt "github.com/docopt/docopt-go"
@@ -67,11 +68,14 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 			log.Debugf("%+v", err)
 			return
 		}
+		w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
 		for _, task := range tasks {
 			if all || task.IsCurrent() {
-				fmt.Println(task)
+				w.Write([]byte(task.String()))
+				w.Write([]byte{'\n'})
 			}
 		}
+		w.Flush()
 	}
 	if opts["add"].(bool) {
 		messages := opts["<message>"].([]string)
