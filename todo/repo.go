@@ -3,20 +3,22 @@ package todo
 import (
 	"database/sql"
 	"os"
+	"strconv"
 	"strings"
 
-    "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	// load sqlite3 driver needed for sqlite store
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
-    log = logrus.WithField("comp", "todo")
+	log = logrus.WithField("comp", "todo")
 )
 
 // Task a todo task
 type Task struct {
+	Id      string
 	Message string
 }
 
@@ -33,12 +35,13 @@ func (t Task) IsCurrent() bool {
 type Repo interface {
 	Close() error
 	List() ([]Task, error)
+	Add(string) (Task, error)
 }
 
 // RepoFromPath Return a repository stored in path
 func RepoFromPath(path string) (Repo, error) {
 	t, p := splitPath(path)
-    log.Debugf("Open %s at %s", t, p)
+	log.Debugf("Open %s at %s", t, p)
 	if t != "sqlite" {
 		return nil, errors.Errorf("Invalid repo type %s", t)
 	}
@@ -87,21 +90,38 @@ func (d *dbRepo) Close() error {
 }
 
 func (d *dbRepo) List() ([]Task, error) {
-	rows, err := d.db.Query("select message from todo")
+	rows, err := d.db.Query("select rowid, message from todo")
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
 	defer rows.Close()
 	var message string
+	var rowid int64
 	var tasks []Task
 	for rows.Next() {
-		err = rows.Scan(&message)
+		err = rows.Scan(&rowid, &message)
 		if err != nil {
 			return nil, errors.New(err.Error())
 		}
 		tasks = append(tasks, Task{
+			Id:      strconv.FormatInt(rowid, 10),
 			Message: message,
 		})
 	}
 	return tasks, nil
+}
+
+func (d *dbRepo) Add(message string) (Task, error) {
+	r, err := d.db.Exec("insert into todo(message) values (?)", message)
+	if err != nil {
+		return Task{}, errors.New(err.Error())
+	}
+	id, err := r.LastInsertId()
+	if err != nil {
+		return Task{}, errors.New(err.Error())
+	}
+	return Task{
+		Id:      strconv.FormatInt(id, 10),
+		Message: message,
+	}, nil
 }

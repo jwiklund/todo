@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	"strings"
+
+	"github.com/Sirupsen/logrus"
 	opt "github.com/docopt/docopt-go"
 	"github.com/jwiklund/todo/todo"
-	_ "github.com/pkg/errors"
 )
 
 var usage = `Todo list.
@@ -15,15 +16,15 @@ var usage = `Todo list.
 Usage:
   todo -h
   todo [-av][-r <repo>] list
-  todo [-av][-r <repo>] add <message...>
-  todo [-av][-r <repo>] update <id> <state>
+  todo [-v][-r <repo>] add <message>...
+  todo [-v][-r <repo>] update <id> <state>
     
 Options:
   -a          include all tasks [default false]
   -v          be verbose (debug) [default false]
   -r <repo>   custom repo [default sqlite://~/.todo.db]
 `
-var mainLog = log.WithField("comp", "main")
+var log = logrus.WithField("comp", "main")
 
 func main() {
 	opts, err := opt.Parse(usage, nil, true, "1.0", false)
@@ -32,9 +33,9 @@ func main() {
 		return
 	}
 	if opts["-v"].(bool) {
-		log.SetLevel(log.DebugLevel)
+		logrus.SetLevel(logrus.DebugLevel)
 	}
-	mainLog.Debug("Args ", sortOpts(opts))
+	log.Debug("Args ", sortOpts(opts))
 
 	repo := repo(opts)
 	if repo != nil {
@@ -50,20 +51,20 @@ func repo(opts map[string]interface{}) todo.Repo {
 	}
 	repo, err := todo.RepoFromPath(path)
 	if err != nil {
-		mainLog.Error("Invalid repository path ", path, " ", err.Error())
-		mainLog.Debugf("%+v", err)
+		log.Error("Invalid repository path ", path, " ", err.Error())
+		log.Debugf("%+v", err)
 		return nil
 	}
 	return repo
 }
 
 func cmd(r todo.Repo, opts map[string]interface{}) {
-	if opts["list"] != nil {
+	if opts["list"].(bool) {
 		all := opts["-a"].(bool)
 		tasks, err := r.List()
 		if err != nil {
-			mainLog.Error("Couldn't list tasks ", err.Error())
-			mainLog.Debugf("%+v", err)
+			log.Error("Couldn't list tasks ", err.Error())
+			log.Debugf("%+v", err)
 			return
 		}
 		for _, task := range tasks {
@@ -71,6 +72,17 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 				fmt.Println(task)
 			}
 		}
+	}
+	if opts["add"].(bool) {
+		messages := opts["<message>"].([]string)
+		message := strings.Join(messages, " ")
+		task, err := r.Add(message)
+		if err != nil {
+			log.Error("Could not add task ", err.Error())
+			log.Debugf("%+v", err)
+			return
+		}
+		fmt.Println("Created ", task)
 	}
 }
 
