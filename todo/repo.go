@@ -20,26 +20,27 @@ var (
 type State string
 
 func (s State) String() string {
-    return string(s)
+	return string(s)
 }
 
 // StateValid check if state is a valid state
 func StateValid(state string) bool {
-    return state == StateFrom(state).String()
+	return state == StateFrom(state).String()
 }
+
 // StateFrom returns a valid state from a given string (or todo)
 func StateFrom(state string) State {
-    switch state {
-        case "todo":
-            return State(state)
-        case "doing":
-            return State(state)
-        case "waiting":
-            return State(state)
-        case "done":
-            return State(state)
-    }
-    return "todo"
+	switch state {
+	case "todo":
+		return State(state)
+	case "doing":
+		return State(state)
+	case "waiting":
+		return State(state)
+	case "done":
+		return State(state)
+	}
+	return "todo"
 }
 
 // Task a todo task
@@ -97,9 +98,9 @@ func splitPath(path string) (string, string) {
 		t = path[0:indx]
 		p = path[indx+3:]
 	}
+	log.Debug(os.Environ())
 	if strings.HasPrefix(p, "~/") {
-		home := os.ExpandEnv("$HOME")
-		p = home + p[1:]
+		p = home() + p[2:]
 	}
 
 	return t, p
@@ -133,7 +134,7 @@ func (d *dbRepo) List() ([]Task, error) {
 		if err != nil {
 			return nil, errors.New(err.Error())
 		}
-        log.Debugf("raw id=%v,state=%s,message=%s", rowid, state, message)
+		log.Debugf("raw id=%v,state=%s,message=%s", rowid, state, message)
 		tasks = append(tasks, Task{
 			ID:      strconv.FormatInt(rowid, 10),
 			State:   StateFrom(state),
