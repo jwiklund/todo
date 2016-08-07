@@ -3,7 +3,6 @@ package todo
 import (
 	"database/sql"
 	"encoding/json"
-	"os"
 	"strconv"
 	"strings"
 
@@ -34,7 +33,6 @@ func splitPath(path string) (string, string) {
 		t = path[0:indx]
 		p = path[indx+3:]
 	}
-	log.Debug(os.Environ())
 	if strings.HasPrefix(p, "~/") {
 		p = home() + p[2:]
 	}
@@ -71,7 +69,7 @@ func (d *dbRepo) List() ([]Task, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not scan task")
 		}
-		log.Debugf("raw id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
+		log.Debugf("list id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
 		attrM, err := decodeAttr(attrB)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not decode attribute")
@@ -109,23 +107,24 @@ func (d *dbRepo) Get(id string) (Task, error) {
 	}
 	defer rows.Close()
 	if rows.Next() {
-		var scanID int64
+		var rowid int64
 		var state string
 		var message string
-		var attr []byte
-		err = rows.Scan(&scanID, &state, &message, &attr)
+		var attrB []byte
+		err = rows.Scan(&rowid, &state, &message, &attrB)
+		log.Debugf("get id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
 		if err != nil {
 			return Task{}, errors.New(err.Error())
 		}
-		attrB, err := decodeAttr(attr)
+		attr, err := decodeAttr(attrB)
 		if err != nil {
 			return Task{}, errors.Wrap(err, "Could not decode attributes")
 		}
 		return Task{
-			ID:      strconv.FormatInt(scanID, 10),
+			ID:      strconv.FormatInt(rowid, 10),
 			State:   StateFrom(state),
 			Message: message,
-			Attr:    attrB,
+			Attr:    attr,
 		}, nil
 	}
 	return Task{}, errors.New("Task not found")
@@ -136,6 +135,7 @@ func (d *dbRepo) Update(t Task) error {
 	if err != nil {
 		return errors.Wrap(err, "Could not encode attributes")
 	}
+	log.Debugf("update id=%v,state=%s,message=%s,attr=%s", t.ID, t.State.String(), t.Message, string(attr))
 	r, err := d.db.Exec("update todo set state = ?, message = ?, attr = ? where rowid = ?",
 		t.State.String(), t.Message, attr, t.ID)
 	if err != nil {
@@ -152,18 +152,24 @@ func encodeAttr(a map[string]string) ([]byte, error) {
 		return nil, nil
 	}
 	attr := struct {
-		attributes map[string]string
+		Attributes map[string]string
 	}{a}
 	return json.Marshal(&attr)
 }
 
 func decodeAttr(bs []byte) (map[string]string, error) {
 	if bs == nil || len(bs) == 0 {
-		return map[string]string{}, nil
+		return make(map[string]string), nil
 	}
 	attr := struct {
-		attributes map[string]string
+		Attributes map[string]string
 	}{}
 	err := json.Unmarshal(bs, &attr)
-	return attr.attributes, err
+	if err != nil {
+		return nil, err
+	}
+	if attr.Attributes == nil {
+		return make(map[string]string), nil
+	}
+	return attr.Attributes, err
 }

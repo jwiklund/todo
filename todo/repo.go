@@ -1,6 +1,8 @@
 package todo
 
 import (
+	"reflect"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 )
@@ -46,6 +48,11 @@ type Task struct {
 
 func (t Task) String() string {
 	return "(" + t.ID + ")\t" + t.Message
+}
+
+// Equal check if tasks are equal
+func (t Task) Equal(t2 Task) bool {
+	return reflect.DeepEqual(t, t2)
 }
 
 // IsCurrent return true if task is not waiting or archived
