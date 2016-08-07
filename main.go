@@ -31,6 +31,15 @@ Options:
 `
 var log = logrus.WithField("comp", "main")
 
+var cmds = map[string]func(todo.Repo, map[string]interface{}){
+	"list":   listCmd,
+	"add":    addCmd,
+	"update": updateCmd,
+	"do":     doCmd,
+	"wait":   waitCmd,
+	"done":   doneCmd,
+}
+
 func main() {
 	opts, err := opt.Parse(usage, nil, true, "1.0", false)
 	if err != nil {
@@ -79,34 +88,28 @@ func repo(opts map[string]interface{}) todo.Repo {
 }
 
 func cmd(r todo.Repo, opts map[string]interface{}) {
-	if opts["add"].(bool) {
-		messages := opts["<message>"].([]string)
-		message := strings.Join(messages, " ")
-		task, err := r.Add(message)
-		if err != nil {
-			log.Error("Could not add task ", err.Error())
-			log.Debugf("%+v", err)
+	for key, cmd := range cmds {
+		if opts[key].(bool) {
+			cmd(r, opts)
 			return
 		}
-		fmt.Println("Created ", task)
+	}
+	listCmd(r, opts)
+}
+
+func addCmd(r todo.Repo, opts map[string]interface{}) {
+	messages := opts["<message>"].([]string)
+	message := strings.Join(messages, " ")
+	task, err := r.Add(message)
+	if err != nil {
+		log.Error("Could not add task ", err.Error())
+		log.Debugf("%+v", err)
 		return
 	}
-	if opts["update"].(bool) {
-		update(r, opts["<id>"].(string), opts["<state>"].(string))
-		return
-	}
-	if opts["do"].(bool) {
-		update(r, opts["<id>"].(string), "doing")
-		return
-	}
-	if opts["wait"].(bool) {
-		update(r, opts["<id>"].(string), "waiting")
-		return
-	}
-	if opts["done"].(bool) {
-		update(r, opts["<id>"].(string), "done")
-		return
-	}
+	fmt.Println("Created ", task)
+}
+
+func listCmd(r todo.Repo, opts map[string]interface{}) {
 	all := opts["-a"].(bool)
 	tasks, err := r.List()
 	if err != nil {
@@ -122,6 +125,22 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 		}
 	}
 	w.Flush()
+}
+
+func updateCmd(r todo.Repo, opts map[string]interface{}) {
+	update(r, opts["<id>"].(string), opts["<state>"].(string))
+}
+
+func doCmd(r todo.Repo, opts map[string]interface{}) {
+	update(r, opts["<id>"].(string), "doing")
+}
+
+func waitCmd(r todo.Repo, opts map[string]interface{}) {
+	update(r, opts["<id>"].(string), "waiting")
+}
+
+func doneCmd(r todo.Repo, opts map[string]interface{}) {
+	update(r, opts["<id>"].(string), "done")
 }
 
 func update(r todo.Repo, id, state string) {
