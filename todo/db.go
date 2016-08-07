@@ -2,6 +2,7 @@ package todo
 
 import (
 	"database/sql"
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ func newSQL(t, p string) (Repo, error) {
 		return nil, errors.New(err.Error())
 	}
 
-	_, err = db.Exec(`create table if not exists todo(id text primary key, state text, message text)`)
+	_, err = db.Exec(`create table if not exists todo(id text primary key, state text, message text, attr text)`)
 	if err != nil {
 		db.Close()
 		return nil, errors.New(err.Error())
@@ -55,7 +56,7 @@ func (d *dbRepo) Close() error {
 }
 
 func (d *dbRepo) List() ([]Task, error) {
-	rows, err := d.db.Query("select rowid, state, message from todo where state != 'done'")
+	rows, err := d.db.Query("select rowid, state, message, attr from todo where state != 'done'")
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
@@ -63,17 +64,23 @@ func (d *dbRepo) List() ([]Task, error) {
 	var message string
 	var state string
 	var rowid int64
+	var attrB []byte
 	var tasks []Task
 	for rows.Next() {
-		err = rows.Scan(&rowid, &state, &message)
+		err = rows.Scan(&rowid, &state, &message, &attrB)
 		if err != nil {
-			return nil, errors.New(err.Error())
+			return nil, errors.Wrap(err, "Could not scan task")
 		}
-		log.Debugf("raw id=%v,state=%s,message=%s", rowid, state, message)
+		log.Debugf("raw id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
+		attrM, err := decodeAttr(attrB)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not decode attribute")
+		}
 		tasks = append(tasks, Task{
 			ID:      strconv.FormatInt(rowid, 10),
 			State:   StateFrom(state),
 			Message: message,
+			Attr:    attrM,
 		})
 	}
 	return tasks, nil
@@ -96,35 +103,67 @@ func (d *dbRepo) Add(message string) (Task, error) {
 }
 
 func (d *dbRepo) Get(id string) (Task, error) {
-	rows, err := d.db.Query("select rowid, state, message from todo where rowid = ?", id)
+	rows, err := d.db.Query("select rowid, state, message, attr from todo where rowid = ?", id)
 	if err != nil {
 		return Task{}, errors.New(err.Error())
 	}
 	defer rows.Close()
 	if rows.Next() {
-		var id int64
+		var scanID int64
 		var state string
 		var message string
-		err = rows.Scan(&id, &state, &message)
+		var attr []byte
+		err = rows.Scan(&scanID, &state, &message, &attr)
 		if err != nil {
 			return Task{}, errors.New(err.Error())
 		}
+		attrB, err := decodeAttr(attr)
+		if err != nil {
+			return Task{}, errors.Wrap(err, "Could not decode attributes")
+		}
 		return Task{
-			ID:      strconv.FormatInt(id, 10),
+			ID:      strconv.FormatInt(scanID, 10),
 			State:   StateFrom(state),
 			Message: message,
+			Attr:    attrB,
 		}, nil
 	}
 	return Task{}, errors.New("Task not found")
 }
 
 func (d *dbRepo) Update(t Task) error {
-	r, err := d.db.Exec("update todo set state = ?, message = ? where rowid = ?", t.State.String(), t.Message, t.ID)
+	attr, err := encodeAttr(t.Attr)
 	if err != nil {
-		return errors.New(err.Error())
+		return errors.Wrap(err, "Could not encode attributes")
+	}
+	r, err := d.db.Exec("update todo set state = ?, message = ?, attr = ? where rowid = ?",
+		t.State.String(), t.Message, attr, t.ID)
+	if err != nil {
+		return errors.Wrap(err, "Could not update task")
 	}
 	if rows, _ := r.RowsAffected(); rows != 1 {
 		return errors.New("Update failed, no rows affected")
 	}
 	return nil
+}
+
+func encodeAttr(a map[string]string) ([]byte, error) {
+	if a == nil || len(a) == 0 {
+		return nil, nil
+	}
+	attr := struct {
+		attributes map[string]string
+	}{a}
+	return json.Marshal(&attr)
+}
+
+func decodeAttr(bs []byte) (map[string]string, error) {
+	if bs == nil || len(bs) == 0 {
+		return map[string]string{}, nil
+	}
+	attr := struct {
+		attributes map[string]string
+	}{}
+	err := json.Unmarshal(bs, &attr)
+	return attr.attributes, err
 }

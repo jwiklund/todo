@@ -41,6 +41,7 @@ type Task struct {
 	ID      string
 	State   State
 	Message string
+	Attr    map[string]string
 }
 
 func (t Task) String() string {
