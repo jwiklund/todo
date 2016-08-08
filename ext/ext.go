@@ -15,6 +15,7 @@ type External interface {
 // ExternalConfig external storage config
 type ExternalConfig struct {
 	Type string
+	ID   string
 	URI  string
 }
 
