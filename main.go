@@ -7,28 +7,34 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/jwiklund/todo/ext"
+	_ "github.com/jwiklund/todo/ext/text"
+	"github.com/jwiklund/todo/todo"
+	"github.com/jwiklund/todo/util"
+
+	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
 	opt "github.com/docopt/docopt-go"
-	"github.com/jwiklund/todo/ext"
-	"github.com/jwiklund/todo/todo"
+	"github.com/pkg/errors"
 )
 
 var usage = `Todo list.
 
 Usage:
   todo -h
-  todo [-av][-r <repo>]
-  todo [-av][-r <repo>] list
-  todo [-v][-r <repo>] add [-a <key> <value>] <message>...
-  todo [-v][-r <repo>] update <id> [-a <key> [<value>]][<state>]
-  todo [-v][-r <repo>] show <id>
-  todo [-v][-r <repo>] do <id>
-  todo [-v][-r <repo>] wait <id>
-  todo [-v][-r <repo>] done <id>
+  todo [-av][-r <repo>][-c <cfg>]
+  todo [-av][-r <repo>][-c <cfg>] list
+  todo [-v][-r <repo>][-c <cfg>] add [-a <key> <value>] <message>...
+  todo [-v][-r <repo>][-c <cfg>] update <id> [-a <key> [<value>]][<state>]
+  todo [-v][-r <repo>][-c <cfg>] show <id>
+  todo [-v][-r <repo>][-c <cfg>] do <id>
+  todo [-v][-r <repo>][-c <cfg>] wait <id>
+  todo [-v][-r <repo>][-c <cfg>] done <id>
     
 Options:
   -a          include all tasks [default false]
   -v          be verbose (debug) [default false]
+  -c <cfg>    config [default ~/.todo.conf]
   -r <repo>   custom repo [default sqlite://~/.todo.db]
 `
 var log = logrus.WithField("comp", "main")
@@ -43,6 +49,10 @@ var cmds = map[string]func(todo.Repo, map[string]interface{}){
 	"done":   doneCmd,
 }
 
+type config struct {
+	External []ext.ExternalConfig
+}
+
 func main() {
 	opts, err := opt.Parse(usage, nil, true, "1.0", false)
 	if err != nil {
@@ -55,11 +65,24 @@ func main() {
 	log.Debug("Args ", sortOpts(opts))
 
 	repo := repo(opts)
-	if repo != nil {
-		extRepo := ext.Repo(repo)
-		cmd(extRepo, opts)
-		log.Debugf("Close returned %v", extRepo.Close())
+	if repo == nil {
+		return
 	}
+
+	config, err := readConfig(opts["<cfg>"])
+	if err != nil {
+		log.Error(err.Error())
+		log.Debug("%+v", err)
+		return
+	}
+	extRepo, err := ext.Repo(repo, config.External)
+	if err != nil {
+		log.Error(err.Error())
+		log.Debug("%+v", err)
+		return
+	}
+	cmd(extRepo, opts)
+	log.Debugf("Close returned %v", extRepo.Close())
 }
 
 func sortOpts(opts map[string]interface{}) string {
@@ -89,6 +112,28 @@ func repo(opts map[string]interface{}) todo.Repo {
 		return nil
 	}
 	return repo
+}
+
+func readConfig(path interface{}) (config, error) {
+	p := "~/.todo.conf"
+	c := config{}
+	if path != nil {
+		p = path.(string)
+	}
+	p = util.Expand(p)
+	stat, err := os.Stat(p)
+	if err != nil {
+		log.Debug("Config file not found, using defaults", err)
+		return c, nil
+	}
+	if stat.IsDir() {
+		return c, errors.Wrap(err, "Config is a directory")
+	}
+
+	if _, err := toml.DecodeFile(p, &c); err != nil {
+		return c, errors.Wrap(err, "Could not read config")
+	}
+	return c, nil
 }
 
 func cmd(r todo.Repo, opts map[string]interface{}) {

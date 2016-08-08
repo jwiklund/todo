@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jwiklund/todo/util"
 	"github.com/pkg/errors"
 	// load sqlite3 driver needed for sqlite store
 	_ "github.com/mattn/go-sqlite3"
@@ -33,11 +34,8 @@ func splitPath(path string) (string, string) {
 		t = path[0:indx]
 		p = path[indx+3:]
 	}
-	if strings.HasPrefix(p, "~/") {
-		p = home() + p[2:]
-	}
 
-	return t, p
+	return t, util.Expand(p)
 }
 
 type dbRepo struct {
