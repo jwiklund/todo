@@ -24,8 +24,8 @@ Usage:
   todo -h
   todo [-av][-r <repo>][-c <cfg>]
   todo [-av][-r <repo>][-c <cfg>] list
-  todo [-v][-r <repo>][-c <cfg>] add [-a <key> <value>] <message>...
-  todo [-v][-r <repo>][-c <cfg>] update <id> [-a <key> [<value>]][<state>]
+  todo [-v][-r <repo>][-c <cfg>] add [(-a <key> <value>)] <message>...
+  todo [-v][-r <repo>][-c <cfg>] update <id> [(-a <key> <value>) <state>]
   todo [-v][-r <repo>][-c <cfg>] show <id>
   todo [-v][-r <repo>][-c <cfg>] do <id>
   todo [-v][-r <repo>][-c <cfg>] wait <id>
