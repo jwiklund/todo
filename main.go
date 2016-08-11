@@ -22,14 +22,14 @@ var usage = `Todo list.
 
 Usage:
   todo -h
-  todo [-av][-r <repo>][-c <cfg>]
-  todo [-av][-r <repo>][-c <cfg>] list
-  todo [-v][-r <repo>][-c <cfg>] add [(-a <key> <value>)] <message>...
-  todo [-v][-r <repo>][-c <cfg>] update <id> [(-a <key> <value>) <state>]
-  todo [-v][-r <repo>][-c <cfg>] show <id>
-  todo [-v][-r <repo>][-c <cfg>] do <id>
-  todo [-v][-r <repo>][-c <cfg>] wait <id>
-  todo [-v][-r <repo>][-c <cfg>] done <id>
+  todo [(-r <repo>) (-c <cfg>) -av]
+  todo [(-r <repo>) (-c <cfg>) -av] list
+  todo [(-r <repo>) (-c <cfg>) -v] add [(-a <key> <value>)] <message>...
+  todo [(-r <repo>) (-c <cfg>) -v] update <id> [(-a <key> <value>) <state>]
+  todo [(-r <repo>) (-c <cfg>) -v] show <id>
+  todo [(-r <repo>) (-c <cfg>) -v] do <id>
+  todo [(-r <repo>) (-c <cfg>) -v] wait <id>
+  todo [(-r <repo>) (-c <cfg>) -v] done <id>
     
 Options:
   -a          include all tasks [default false]
