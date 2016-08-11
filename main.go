@@ -150,19 +150,23 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 func addCmd(r todo.Repo, opts map[string]interface{}) {
 	messages := opts["<message>"].([]string)
 	message := strings.Join(messages, " ")
-	task, err := r.Add(message)
+	_, err := r.Add(message)
 	if err != nil {
 		log.Error("Could not add task ", err.Error())
 		log.Debugf("%+v", err)
 		return
 	}
-	fmt.Println("Created ", task)
+	list(r, false)
 }
 
 //  todo [-av][-r <repo>]
 //  todo [-av][-r <repo>] list
 func listCmd(r todo.Repo, opts map[string]interface{}) {
 	all := opts["-a"].(bool)
+	list(r, all)
+}
+
+func list(r todo.Repo, all bool) {
 	tasks, err := r.List()
 	if err != nil {
 		log.Error("Couldn't list tasks ", err.Error())
@@ -252,4 +256,5 @@ func update(r todo.Repo, id, state, key, value string) {
 		log.Debugf("%+v", err)
 		return
 	}
+	list(r, false)
 }
