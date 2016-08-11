@@ -23,7 +23,7 @@ var usage = `Todo list.
 Usage:
   todo -h
   todo [(-r <repo>) (-c <cfg>) -av]
-  todo [(-r <repo>) (-c <cfg>) -av] list
+  todo [(-r <repo>) (-c <cfg>) -av] list [<state>]
   todo [(-r <repo>) (-c <cfg>) -v] add [(-a <key> <value>)] <message>...
   todo [(-r <repo>) (-c <cfg>) -v] update <id> [(-a <key> <value>) <state>]
   todo [(-r <repo>) (-c <cfg>) -v] show <id>
@@ -146,6 +146,47 @@ func cmd(r todo.Repo, opts map[string]interface{}) {
 	listCmd(r, opts)
 }
 
+//  todo [-av][-r <repo>]
+//  todo [-av][-r <repo>] list
+func listCmd(r todo.Repo, opts map[string]interface{}) {
+	all := opts["-a"].(bool)
+	state, _ := opts["<state>"].(string)
+	list(r, all, state)
+}
+
+func list(r todo.Repo, all bool, state string) {
+	tasks, err := r.List()
+	if err != nil {
+		log.Error("Couldn't list tasks ", err.Error())
+		log.Debugf("%+v", err)
+		return
+	}
+	filter := func(t todo.Task) bool {
+		return true
+	}
+	if !all {
+		oldFilter := filter
+		filter = func(t todo.Task) bool {
+			return oldFilter(t) && t.IsCurrent()
+		}
+	}
+	if state != "" {
+		oldFilter := filter
+		verifiedState := todo.StateFrom(state)
+		filter = func(t todo.Task) bool {
+			return oldFilter(t) && t.State == verifiedState
+		}
+	}
+	w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
+	for _, task := range tasks {
+		if filter(task) {
+			w.Write([]byte(task.String()))
+			w.Write([]byte{'\n'})
+		}
+	}
+	w.Flush()
+}
+
 // todo [-v][-r <repo>] add [-a <key> <value>] <message>...
 func addCmd(r todo.Repo, opts map[string]interface{}) {
 	messages := opts["<message>"].([]string)
@@ -156,31 +197,7 @@ func addCmd(r todo.Repo, opts map[string]interface{}) {
 		log.Debugf("%+v", err)
 		return
 	}
-	list(r, false)
-}
-
-//  todo [-av][-r <repo>]
-//  todo [-av][-r <repo>] list
-func listCmd(r todo.Repo, opts map[string]interface{}) {
-	all := opts["-a"].(bool)
-	list(r, all)
-}
-
-func list(r todo.Repo, all bool) {
-	tasks, err := r.List()
-	if err != nil {
-		log.Error("Couldn't list tasks ", err.Error())
-		log.Debugf("%+v", err)
-		return
-	}
-	w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
-	for _, task := range tasks {
-		if all || task.IsCurrent() {
-			w.Write([]byte(task.String()))
-			w.Write([]byte{'\n'})
-		}
-	}
-	w.Flush()
+	list(r, false, "")
 }
 
 //  todo [-v][-r <repo>] show <id>
@@ -256,5 +273,5 @@ func update(r todo.Repo, id, state, key, value string) {
 		log.Debugf("%+v", err)
 		return
 	}
-	list(r, false)
+	list(r, false, "")
 }
