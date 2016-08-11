@@ -47,7 +47,7 @@ type Task struct {
 }
 
 func (t Task) String() string {
-	return "(" + t.ID + ")\t" + t.Message
+	return "(" + t.ID + ")\t" + t.State.String() + "\t" + t.Message
 }
 
 // Equal check if tasks are equal
