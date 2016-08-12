@@ -2,7 +2,6 @@ package text
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -11,10 +10,11 @@ import (
 	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/util"
+	"github.com/ngaut/log"
 	"github.com/pkg/errors"
 )
 
-var log = logrus.WithField("comp", "ext.text")
+var textLog = logrus.WithField("comp", "ext.text")
 
 func init() {
 	ext.Register("text", func(cfg ext.ExternalConfig) (ext.External, error) {
@@ -36,6 +36,9 @@ func New(id, path string) (ext.External, error) {
 			return nil, errors.Wrap(err, "Could not open exported text")
 		}
 		source = bytes.Split(input, []byte("\n"))
+		if len(source) > 0 && len(source[len(source)-1]) == 0 {
+			source = source[0 : len(source)-1]
+		}
 	}
 	return &text{id, path, false, source}, nil
 }
@@ -49,17 +52,17 @@ type text struct {
 
 func (t *text) Handle(task todo.Task) (todo.Task, error) {
 	if a := task.Attr["external"]; a != t.id {
-		log.Debug(a, t.id)
+		textLog.Debug(a, t.id)
 		return task, nil
 	}
 	if a := task.Attr[t.id+".id"]; a != "" {
 		ind, err := strconv.Atoi(a)
 		if err != nil {
-			log.Debugf("Invalid id attribute %s, ignoring %s", a, task.ID)
+			textLog.Debugf("Invalid id attribute %s, ignoring %s", a, task.ID)
 			return task, nil
 		}
 		if ind < 0 || ind >= len(t.source) {
-			log.Debugf("Invalid id attribute %s (range)", ind)
+			textLog.Debugf("Invalid id attribute %s (range)", ind)
 			return task, nil
 		}
 		if string(t.source[ind]) != task.Message {
@@ -72,10 +75,6 @@ func (t *text) Handle(task todo.Task) (todo.Task, error) {
 		t.updated = true
 	}
 	return task, nil
-}
-
-func (t *text) Sync(r todo.Repo) error {
-	return fmt.Errorf("Not implemented")
 }
 
 func (t *text) Close() error {

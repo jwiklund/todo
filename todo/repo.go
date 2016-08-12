@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	log = logrus.WithField("comp", "todo")
+	todoLog = logrus.WithField("comp", "todo")
 )
 
 // State valid state, one of "todo", "doing", "waiting", done"
@@ -62,17 +62,31 @@ func (t Task) IsCurrent() bool {
 
 // Repo a todo repository
 type Repo interface {
-	Close() error
 	List() ([]Task, error)
 	Add(string) (Task, error)
+	AddWithAttr(string, map[string]string) (Task, error)
 	Get(string) (Task, error)
 	Update(Task) error
+
+	Close() error
+}
+
+// RepoBegin with begin
+type RepoBegin interface {
+	Repo
+	Begin() (RepoCommit, error)
+}
+
+// RepoCommit with commit
+type RepoCommit interface {
+	Repo
+	Commit() error
 }
 
 // RepoFromPath Return a repository stored in path
-func RepoFromPath(path string) (Repo, error) {
+func RepoFromPath(path string) (RepoBegin, error) {
 	t, p := splitPath(path)
-	log.Debugf("Open %s at %s", t, p)
+	todoLog.Debugf("Open %s at %s", t, p)
 	if t != "sqlite" {
 		return nil, errors.Errorf("Invalid repo type %s", t)
 	}

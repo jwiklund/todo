@@ -12,7 +12,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func newSQL(t, p string) (Repo, error) {
+func newSQL(t, p string) (RepoBegin, error) {
 	db, err := sql.Open("sqlite3", p)
 	if err != nil {
 		return nil, errors.New(err.Error())
@@ -38,6 +38,11 @@ func splitPath(path string) (string, string) {
 	return t, util.Expand(p)
 }
 
+type dbOrTx interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 type dbRepo struct {
 	db *sql.DB
 }
@@ -51,8 +56,72 @@ func (d *dbRepo) Close() error {
 	return nil
 }
 
+func (d *dbRepo) Begin() (RepoCommit, error) {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not start transaction")
+	}
+	return &txRepo{tx}, nil
+}
+
 func (d *dbRepo) List() ([]Task, error) {
-	rows, err := d.db.Query("select rowid, state, message, attr from todo where state != 'done'")
+	return list(d.db)
+}
+
+func (d *dbRepo) Add(message string) (Task, error) {
+	return add(d.db, message, nil)
+}
+
+func (d *dbRepo) AddWithAttr(message string, attr map[string]string) (Task, error) {
+	return add(d.db, message, attr)
+}
+
+func (d *dbRepo) Update(task Task) error {
+	return update(d.db, task)
+}
+
+func (d *dbRepo) Get(id string) (Task, error) {
+	return get(d.db, id)
+}
+
+type txRepo struct {
+	tx *sql.Tx
+}
+
+func (t *txRepo) Begin() (RepoCommit, error) {
+	return t, nil
+}
+
+func (t *txRepo) Commit() error {
+	return t.tx.Commit()
+}
+
+func (t *txRepo) Close() error {
+	return t.tx.Rollback()
+}
+
+func (t *txRepo) List() ([]Task, error) {
+	return list(t.tx)
+}
+
+func (t *txRepo) Add(message string) (Task, error) {
+	return add(t.tx, message, nil)
+}
+
+func (t *txRepo) AddWithAttr(message string, attr map[string]string) (Task, error) {
+	return add(t.tx, message, attr)
+}
+
+func (t *txRepo) Update(task Task) error {
+	return update(t.tx, task)
+}
+
+func (t *txRepo) Get(id string) (Task, error) {
+	return get(t.tx, id)
+}
+
+func list(db dbOrTx) ([]Task, error) {
+	rows, err := db.Query("select rowid, state, message, attr from todo where state != 'done'")
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
@@ -67,7 +136,7 @@ func (d *dbRepo) List() ([]Task, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not scan task")
 		}
-		log.Debugf("list id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
+		todoLog.Debugf("list id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
 		attrM, err := decodeAttr(attrB)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not decode attribute")
@@ -82,24 +151,29 @@ func (d *dbRepo) List() ([]Task, error) {
 	return tasks, nil
 }
 
-func (d *dbRepo) Add(message string) (Task, error) {
-	r, err := d.db.Exec("insert into todo(state, message) values (?, ?)", "todo", message)
+func add(db dbOrTx, message string, attr map[string]string) (Task, error) {
+	attrB, err := encodeAttr(attr)
 	if err != nil {
-		return Task{}, errors.New(err.Error())
+		return Task{}, errors.Wrap(err, "could not encode attr")
+	}
+	r, err := db.Exec("insert into todo(state, message, attr) values (?, ?, ?)", "todo", message, attrB)
+	if err != nil {
+		return Task{}, errors.Wrap(err, "could not write task")
 	}
 	id, err := r.LastInsertId()
 	if err != nil {
-		return Task{}, errors.New(err.Error())
+		return Task{}, errors.Wrap(err, "could not get id")
 	}
 	return Task{
 		ID:      strconv.FormatInt(id, 10),
 		State:   "todo",
 		Message: message,
+		Attr:    attr,
 	}, nil
 }
 
-func (d *dbRepo) Get(id string) (Task, error) {
-	rows, err := d.db.Query("select rowid, state, message, attr from todo where rowid = ?", id)
+func get(db dbOrTx, id string) (Task, error) {
+	rows, err := db.Query("select rowid, state, message, attr from todo where rowid = ?", id)
 	if err != nil {
 		return Task{}, errors.New(err.Error())
 	}
@@ -110,7 +184,7 @@ func (d *dbRepo) Get(id string) (Task, error) {
 		var message string
 		var attrB []byte
 		err = rows.Scan(&rowid, &state, &message, &attrB)
-		log.Debugf("get id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
+		todoLog.Debugf("get id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
 		if err != nil {
 			return Task{}, errors.New(err.Error())
 		}
@@ -128,13 +202,13 @@ func (d *dbRepo) Get(id string) (Task, error) {
 	return Task{}, errors.New("Task not found")
 }
 
-func (d *dbRepo) Update(t Task) error {
+func update(db dbOrTx, t Task) error {
 	attr, err := encodeAttr(t.Attr)
 	if err != nil {
 		return errors.Wrap(err, "Could not encode attributes")
 	}
-	log.Debugf("update id=%v,state=%s,message=%s,attr=%s", t.ID, t.State.String(), t.Message, string(attr))
-	r, err := d.db.Exec("update todo set state = ?, message = ?, attr = ? where rowid = ?",
+	todoLog.Debugf("update id=%v,state=%s,message=%s,attr=%s", t.ID, t.State.String(), t.Message, string(attr))
+	r, err := db.Exec("update todo set state = ?, message = ?, attr = ? where rowid = ?",
 		t.State.String(), t.Message, attr, t.ID)
 	if err != nil {
 		return errors.Wrap(err, "Could not update task")

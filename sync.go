@@ -12,22 +12,20 @@ func syncCmd(r ext.Repo, opts map[string]interface{}) {
 		external = s.(string)
 	}
 	if external != "" {
-		if ext, ok := r.Externals()[external]; ok {
-			err := ext.Sync(r)
-			if err != nil {
-				mainLog.Errorf("Failed to sync external %s %v", external, err)
-				mainLog.Debugf("%+v", err)
-			}
-		} else {
-			mainLog.Errorf("external %s not configured", external)
+		err := r.Sync(external)
+		if err != nil {
+			mainLog.Errorf("Failed to sync external %s %v", external, err)
+			mainLog.Debugf("%+v", err)
+			return
 		}
 	} else {
-		for id, ext := range r.Externals() {
-			if err := ext.Sync(r); err != nil {
-				mainLog.Errorf("Failed to sync external %s %v", id, err)
-				mainLog.Debugf("%+v", err)
-				return
-			}
+		err := r.SyncAll()
+		if err != nil {
+			mainLog.Errorf("Failed to sync external %v", err)
+			mainLog.Debugf("%+v", err)
+			return
 		}
 	}
+
+	list(r, false, "")
 }

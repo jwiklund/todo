@@ -1,15 +1,14 @@
 package ext
 
 import (
-	"errors"
-
 	"github.com/jwiklund/todo/todo"
+	"github.com/pkg/errors"
 )
 
 // External storage interface
 type External interface {
 	Handle(task todo.Task) (todo.Task, error)
-	Sync(r todo.Repo) error
+	Sync(r todo.RepoBegin) error
 	Close() error
 }
 
@@ -28,9 +27,7 @@ var externalFuncs map[string]ExternalFactory
 // Register a named external factory
 func Register(name string, factory ExternalFactory) {
 	if externalFuncs == nil {
-		externalFuncs = map[string]ExternalFactory{
-			name: factory,
-		}
+		externalFuncs = map[string]ExternalFactory{name: factory}
 	} else {
 		externalFuncs[name] = factory
 	}
@@ -62,10 +59,6 @@ type external struct {
 	externals map[string]External
 }
 
-func (ext external) Externals() map[string]External {
-	return ext.externals
-}
-
 func (ext external) Close() error {
 	var e error
 	for _, external := range ext.externals {
@@ -86,4 +79,22 @@ func (ext external) Handle(task todo.Task) (todo.Task, error) {
 		task = mod
 	}
 	return task, nil
+}
+
+func (ext external) Sync(r todo.RepoBegin, name string) error {
+	if ext, ok := ext.externals[name]; ok {
+		return ext.Sync(r)
+	}
+	return errors.Errorf("external %s does not exist", name)
+}
+
+func (ext external) SyncAll(r todo.RepoBegin) error {
+	for id, ext := range ext.externals {
+		err := ext.Sync(r)
+		if err != nil {
+			return errors.Wrapf(err, "Failed %s", id)
+		}
+	}
+
+	return nil
 }

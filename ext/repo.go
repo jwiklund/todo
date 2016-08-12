@@ -1,18 +1,17 @@
 package ext
 
-import (
-	"github.com/jwiklund/todo/todo"
-)
+import "github.com/jwiklund/todo/todo"
 
-// Repo an external repo, with Exernal(string) External
+// Repo an external repo
 type Repo interface {
 	todo.Repo
 
-	Externals() map[string]External
+	Sync(name string) error
+	SyncAll() error
 }
 
 // ExternalRepo wrap a repo with external handling
-func ExternalRepo(repo todo.Repo, config []ExternalConfig) (Repo, error) {
+func ExternalRepo(repo todo.RepoBegin, config []ExternalConfig) (Repo, error) {
 	external, err := configure(config)
 	if err != nil {
 		return nil, err
@@ -21,12 +20,16 @@ func ExternalRepo(repo todo.Repo, config []ExternalConfig) (Repo, error) {
 }
 
 type extRepo struct {
-	repo todo.Repo
+	repo todo.RepoBegin
 	ext  external
 }
 
-func (r *extRepo) Externals() map[string]External {
-	return r.ext.Externals()
+func (r *extRepo) Sync(name string) error {
+	return r.ext.Sync(r.repo, name)
+}
+
+func (r *extRepo) SyncAll() error {
+	return r.ext.SyncAll(r.repo)
 }
 
 func (r *extRepo) Close() error {
@@ -47,6 +50,21 @@ func (r *extRepo) List() ([]todo.Task, error) {
 
 func (r *extRepo) Add(message string) (todo.Task, error) {
 	task, err := r.repo.Add(message)
+	if err != nil {
+		return task, err
+	}
+	upd, err := r.ext.Handle(task)
+	if err != nil {
+		return upd, err
+	}
+	if !task.Equal(upd) {
+		return upd, r.repo.Update(upd)
+	}
+	return upd, nil
+}
+
+func (r *extRepo) AddWithAttr(message string, attr map[string]string) (todo.Task, error) {
+	task, err := r.repo.AddWithAttr(message, attr)
 	if err != nil {
 		return task, err
 	}

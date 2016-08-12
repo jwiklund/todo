@@ -102,7 +102,7 @@ func sortOpts(opts map[string]interface{}) string {
 	return res.String()
 }
 
-func repo(opts map[string]interface{}) todo.Repo {
+func repo(opts map[string]interface{}) todo.RepoBegin {
 	path, _ := opts["-r"].(string)
 	if path == "" {
 		path = "sqlite://~/.todo.db"
