@@ -4,9 +4,16 @@ import (
 	"github.com/jwiklund/todo/todo"
 )
 
-// Repo wrap a repo with external handling
-func Repo(repo todo.Repo, config []ExternalConfig) (todo.Repo, error) {
-	external, err := Configure(config)
+// Repo an external repo, with Exernal(string) External
+type Repo interface {
+	todo.Repo
+
+	Externals() map[string]External
+}
+
+// ExternalRepo wrap a repo with external handling
+func ExternalRepo(repo todo.Repo, config []ExternalConfig) (Repo, error) {
+	external, err := configure(config)
 	if err != nil {
 		return nil, err
 	}
@@ -15,7 +22,11 @@ func Repo(repo todo.Repo, config []ExternalConfig) (todo.Repo, error) {
 
 type extRepo struct {
 	repo todo.Repo
-	ext  External
+	ext  external
+}
+
+func (r *extRepo) Externals() map[string]External {
+	return r.ext.Externals()
 }
 
 func (r *extRepo) Close() error {

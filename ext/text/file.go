@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -71,6 +72,10 @@ func (t *text) Handle(task todo.Task) (todo.Task, error) {
 		t.updated = true
 	}
 	return task, nil
+}
+
+func (t *text) Sync(r todo.Repo) error {
+	return fmt.Errorf("Not implemented")
 }
 
 func (t *text) Close() error {
