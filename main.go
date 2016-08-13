@@ -25,7 +25,7 @@ Usage:
   todo [(-r <repo>) (-c <cfg>) -av]
   todo [(-r <repo>) (-c <cfg>) -av] list [<state>]
   todo [(-r <repo>) (-c <cfg>) -v] add [(-a <key> <value>)] <message>...
-  todo [(-r <repo>) (-c <cfg>) -v] update <id> [(-a <key> <value>) <state>]
+  todo [(-r <repo>) (-c <cfg>) -v] update <id> [(-a <key> <value>) (-s <state>) (-m <message>...)]
   todo [(-r <repo>) (-c <cfg>) -v] sync [<external>]
   todo [(-r <repo>) (-c <cfg>) -v] show <id>
   todo [(-r <repo>) (-c <cfg>) -v] do <id>
@@ -231,30 +231,37 @@ func updateCmd(r ext.Repo, opts map[string]interface{}) {
 	if s := opts["<value>"]; s != nil {
 		value = s.(string)
 	}
-	update(r, opts["<id>"].(string), state, key, value)
+	var message []string
+	if m := opts["<message>"]; m != nil {
+		message = m.([]string)
+	}
+	update(r, opts["<id>"].(string), message, state, key, value)
 }
 
 //  todo [-v][-r <repo>] do <id>
 func doCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), "doing", "", "")
+	update(r, opts["<id>"].(string), nil, "doing", "", "")
 }
 
 //  todo [-v][-r <repo>] wait <id>
 func waitCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), "waiting", "", "")
+	update(r, opts["<id>"].(string), nil, "waiting", "", "")
 }
 
 //  todo [-v][-r <repo>] done <id>
 func doneCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), "done", "", "")
+	update(r, opts["<id>"].(string), nil, "done", "", "")
 }
 
-func update(r ext.Repo, id, state, key, value string) {
+func update(r ext.Repo, id string, message []string, state, key, value string) {
 	task, err := r.Get(id)
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debugf("%+v", err)
 		return
+	}
+	if message != nil {
+		task.Message = strings.Join(message, " ")
 	}
 	if state != "" {
 		if !todo.StateValid(state) {
