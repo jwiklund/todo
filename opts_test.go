@@ -63,13 +63,6 @@ func TestAddAttributeMessage(t *testing.T) {
 	assert.Equal(t, "value", opts["<value>"])
 }
 
-func TestRepo(t *testing.T) {
-	expectParseFailure(t, "-r requires argument", "-r")
-
-	opts := parse(t, "-r", "repo")
-	assert.Equal(t, "repo", opts["-r"])
-}
-
 func TestConfig(t *testing.T) {
 	expectParseFailure(t, "-c requires argument", "-c")
 

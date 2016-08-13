@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/jwiklund/todo/ext"
 	_ "github.com/jwiklund/todo/ext/text"
@@ -22,15 +20,15 @@ var usage = `Todo list.
 
 Usage:
   todo -h
-  todo [(-r <repo>) (-c <cfg>) -av]
-  todo [(-r <repo>) (-c <cfg>) -av] list [<state>]
-  todo [(-r <repo>) (-c <cfg>) -v] add [(-a <key> <value>)] <message>...
-  todo [(-r <repo>) (-c <cfg>) -v] update <id> [(-a <key> <value>) (-s <state>) (-m <message>...)]
-  todo [(-r <repo>) (-c <cfg>) -v] sync [<external>]
-  todo [(-r <repo>) (-c <cfg>) -v] show <id>
-  todo [(-r <repo>) (-c <cfg>) -v] do <id>
-  todo [(-r <repo>) (-c <cfg>) -v] wait <id>
-  todo [(-r <repo>) (-c <cfg>) -v] done <id>
+  todo [(-c <cfg>) -va]
+  todo [(-c <cfg>) -va] list [<state>]
+  todo [(-c <cfg>) -v] add [(-a <key> <value>)] <message>...
+  todo [(-c <cfg>) -v] update <id> [(-a <key> <value>) (-s <state>) (-m <message>...)]
+  todo [(-c <cfg>) -v] sync [<external>]
+  todo [(-c <cfg>) -v] show <id>
+  todo [(-c <cfg>) -v] do <id>
+  todo [(-c <cfg>) -v] wait <id>
+  todo [(-c <cfg>) -v] done <id>
     
 Options:
   -a          include all tasks [default false]
@@ -53,6 +51,7 @@ var cmds = map[string]func(ext.Repo, map[string]interface{}){
 
 type config struct {
 	External []ext.ExternalConfig
+	Repo     string
 }
 
 func main() {
@@ -66,17 +65,18 @@ func main() {
 	}
 	mainLog.Debug("Args ", sortOpts(opts))
 
-	repo := repo(opts)
-	if repo == nil {
-		return
-	}
-
 	config, err := readConfig(opts["<cfg>"])
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debug("%+v", err)
 		return
 	}
+
+	repo := repo(config.Repo)
+	if repo == nil {
+		return
+	}
+
 	extRepo, err := ext.ExternalRepo(repo, config.External)
 	if err != nil {
 		mainLog.Error(err.Error())
@@ -102,8 +102,7 @@ func sortOpts(opts map[string]interface{}) string {
 	return res.String()
 }
 
-func repo(opts map[string]interface{}) todo.RepoBegin {
-	path, _ := opts["-r"].(string)
+func repo(path string) todo.RepoBegin {
 	if path == "" {
 		path = "sqlite://~/.todo.db"
 	}
