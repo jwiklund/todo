@@ -8,6 +8,9 @@ import (
 )
 
 func parse(t *testing.T, args ...string) map[string]interface{} {
+	if args == nil {
+		args = make([]string, 0)
+	}
 	opts, err := opt.Parse(usage, args, false, "1.0", false, false)
 	if err != nil {
 		assert.Fail(t, "Failed parse "+err.Error())
