@@ -52,7 +52,6 @@ type text struct {
 
 func (t *text) Handle(task todo.Task) (todo.Task, error) {
 	if a := task.Attr["external"]; a != t.id {
-		textLog.Debug(a, t.id)
 		return task, nil
 	}
 	if a := task.Attr[t.id+".id"]; a != "" {

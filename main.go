@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/jwiklund/todo/ext"
+	_ "github.com/jwiklund/todo/ext/jira"
 	_ "github.com/jwiklund/todo/ext/text"
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/util"
