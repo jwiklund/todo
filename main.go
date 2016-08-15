@@ -25,7 +25,7 @@ Usage:
   todo [(-c <cfg>) -va] list [<state>]
   todo [(-c <cfg>) -v] add [(-a <key> <value>)] <message>...
   todo [(-c <cfg>) -v] update <id> [(-a <key> <value>) (-s <state>) (-m <message>...)]
-  todo [(-c <cfg>) -v] sync [<external>]
+  todo [(-c <cfg>) -vd] sync [<external>]
   todo [(-c <cfg>) -v] show <id>
   todo [(-c <cfg>) -v] do <id>
   todo [(-c <cfg>) -v] wait <id>
@@ -35,7 +35,7 @@ Options:
   -a          include all tasks [default false]
   -v          be verbose (debug) [default false]
   -c <cfg>    config [default ~/.todo.conf]
-  -r <repo>   custom repo [default sqlite://~/.todo.db]
+  -d          dry run, only print what would be updated [default false]
 `
 var mainLog = logrus.WithField("comp", "main")
 

@@ -6,8 +6,8 @@ import "github.com/jwiklund/todo/todo"
 type Repo interface {
 	todo.Repo
 
-	Sync(name string) error
-	SyncAll() error
+	Sync(name string, dryRun bool) error
+	SyncAll(dryRun bool) error
 }
 
 // ExternalRepo wrap a repo with external handling
@@ -24,12 +24,12 @@ type extRepo struct {
 	ext  external
 }
 
-func (r *extRepo) Sync(name string) error {
-	return r.ext.Sync(r.repo, name)
+func (r *extRepo) Sync(name string, dryRun bool) error {
+	return r.ext.Sync(r.repo, name, dryRun)
 }
 
-func (r *extRepo) SyncAll() error {
-	return r.ext.SyncAll(r.repo)
+func (r *extRepo) SyncAll(dryRun bool) error {
+	return r.ext.SyncAll(r.repo, dryRun)
 }
 
 func (r *extRepo) Close() error {

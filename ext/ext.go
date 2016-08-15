@@ -8,7 +8,7 @@ import (
 // External storage interface
 type External interface {
 	Handle(task todo.Task) (todo.Task, error)
-	Sync(r todo.RepoBegin) error
+	Sync(r todo.RepoBegin, dryRun bool) error
 	Close() error
 }
 
@@ -81,16 +81,16 @@ func (ext external) Handle(task todo.Task) (todo.Task, error) {
 	return task, nil
 }
 
-func (ext external) Sync(r todo.RepoBegin, name string) error {
+func (ext external) Sync(r todo.RepoBegin, name string, dryRun bool) error {
 	if ext, ok := ext.externals[name]; ok {
-		return ext.Sync(r)
+		return ext.Sync(r, dryRun)
 	}
 	return errors.Errorf("external %s does not exist", name)
 }
 
-func (ext external) SyncAll(r todo.RepoBegin) error {
+func (ext external) SyncAll(r todo.RepoBegin, dryRun bool) error {
 	for id, ext := range ext.externals {
-		err := ext.Sync(r)
+		err := ext.Sync(r, dryRun)
 		if err != nil {
 			return errors.Wrapf(err, "Failed %s", id)
 		}

@@ -9,7 +9,7 @@ import (
 
 // Sync all available lines with all available items
 // TODO find existing done tasks before creating new tasks (needs find by attribute)
-func (t *text) Sync(r todo.RepoBegin) error {
+func (t *text) Sync(r todo.RepoBegin, dryRun bool) error {
 	localTasks, err := r.List()
 	if err != nil {
 		return err
@@ -17,7 +17,7 @@ func (t *text) Sync(r todo.RepoBegin) error {
 
 	externalTasks := tasksFor(t.id, t.source)
 
-	return internal.SyncHelper(r, t.id, externalTasks, localTasks)
+	return internal.SyncHelper(r, t.id, dryRun, externalTasks, localTasks)
 
 }
 

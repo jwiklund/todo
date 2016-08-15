@@ -1,8 +1,7 @@
 package internal
 
 import (
-	"strconv"
-
+	"github.com/Sirupsen/logrus"
 	"github.com/deckarep/golang-set"
 	"github.com/jwiklund/todo/todo"
 )
@@ -13,7 +12,7 @@ type indexedTasks struct {
 }
 
 // SyncHelper common sync implememntation
-func SyncHelper(r todo.RepoBegin, extID string, externalCurrent, localCurrent []todo.Task) error {
+func SyncHelper(r todo.RepoBegin, extID string, dryRun bool, externalCurrent, localCurrent []todo.Task) error {
 	external := index(extID, externalCurrent)
 	local := index(extID, localCurrent)
 
@@ -23,6 +22,14 @@ func SyncHelper(r todo.RepoBegin, extID string, externalCurrent, localCurrent []
 	added := externalIds.Difference(localIds)
 	missing := localIds.Difference(externalIds)
 	updated := updated(external, local)
+
+	if dryRun {
+		syncLog := logrus.WithField("comp", "ext.sync")
+		syncLog.Info("DRY RUN ", extID, " ADD ", added)
+		syncLog.Info("DRY RUN ", extID, " REM ", missing)
+		syncLog.Info("DRY RUN ", extID, " UPD ", updated)
+		return nil
+	}
 
 	commitRepo, err := r.Begin()
 	if err != nil {
@@ -97,7 +104,7 @@ func syncAdd(r todo.Repo, extID string, external *indexedTasks, added mapset.Set
 		addedMessage := external.tasks[index].Message
 		_, err := r.AddWithAttr(addedMessage, map[string]string{
 			"external":    extID,
-			extID + ".id": strconv.Itoa(index),
+			extID + ".id": add.(string),
 		})
 		if err != nil {
 			return err

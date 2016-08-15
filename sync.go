@@ -11,15 +11,19 @@ func syncCmd(r ext.Repo, opts map[string]interface{}) {
 	if s := opts["<external>"]; s != nil {
 		external = s.(string)
 	}
+	dryRun := false
+	if b := opts["-d"]; b != nil {
+		dryRun = b.(bool)
+	}
 	if external != "" {
-		err := r.Sync(external)
+		err := r.Sync(external, dryRun)
 		if err != nil {
 			mainLog.Errorf("Failed to sync external %s %v", external, err)
 			mainLog.Debugf("%+v", err)
 			return
 		}
 	} else {
-		err := r.SyncAll()
+		err := r.SyncAll(dryRun)
 		if err != nil {
 			mainLog.Errorf("Failed to sync external %v", err)
 			mainLog.Debugf("%+v", err)

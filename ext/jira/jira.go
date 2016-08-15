@@ -113,10 +113,6 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 	return task, errors.New("Invalid state")
 }
 
-func (t *extJira) Sync(r todo.RepoBegin) error {
-	return errors.New("Not implemented")
-}
-
 func (t *extJira) Close() error {
 	return nil
 }
