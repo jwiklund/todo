@@ -15,7 +15,12 @@ func (t *extJira) Sync(r todo.RepoBegin, dryRun bool) error {
 		return err
 	}
 
-	issues, res, err := t.client.Issue.Search("status != Done", nil)
+	client, err := t.client()
+	if err != nil {
+		return err
+	}
+
+	issues, res, err := client.Issue.Search("status != Done", nil)
 	defer res.Body.Close()
 	if err != nil {
 		body, _ := ioutil.ReadAll(res.Body)
