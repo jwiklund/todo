@@ -23,7 +23,8 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		return New(cfg.ID, url, user, pass)
+		jiraLog.Debugf("%v", cfg)
+		return New(cfg.ID, url, user, pass, cfg.Extra)
 	})
 }
 
@@ -37,8 +38,15 @@ func splitURI(uri string) (string, string, string, error) {
 }
 
 // New create a new jira mirror
-func New(id, url, user, pass string) (ext.External, error) {
-	return &extJira{id, nil, func() (*jira.Client, error) {
+func New(id, url, user, pass string, extra map[string]string) (ext.External, error) {
+
+	project, ok := extra["project"]
+	if !ok {
+		return nil, errors.New("project is required for jira")
+	}
+	label, _ := extra["label"]
+
+	return &extJira{id, project, label, nil, func() (*jira.Client, error) {
 		httpClient := http.Client{
 			Timeout: time.Duration(10 * time.Second),
 		}
@@ -56,6 +64,8 @@ func New(id, url, user, pass string) (ext.External, error) {
 
 type extJira struct {
 	id       string
+	project  string
+	label    string
 	cli      *jira.Client
 	clientFn func() (*jira.Client, error)
 }
@@ -104,6 +114,10 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 			return task, nil
 		}
 	} else {
+		var labels []string
+		if t.label != "" {
+			labels = []string{t.label}
+		}
 		issue := jira.Issue{
 			Fields: &jira.IssueFields{
 				Summary: task.Message,
@@ -113,6 +127,7 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 				Project: jira.Project{
 					Key: "EX",
 				},
+				Labels: labels,
 			},
 		}
 		i, res, err := client.Issue.Create(&issue)
