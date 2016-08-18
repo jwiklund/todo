@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/jwiklund/todo/ext"
@@ -132,10 +133,55 @@ func readConfig(path interface{}) (config, error) {
 		return c, errors.Wrap(err, "Config is a directory")
 	}
 
-	if _, err := toml.DecodeFile(p, &c); err != nil {
-		return c, errors.Wrap(err, "Could not read config")
+	f, e := os.Open(p)
+	if e != nil {
+		return c, errors.Wrap(e, "Could not open config file")
+	}
+	defer f.Close()
+
+	return readConfigToml(f)
+}
+
+func readConfigToml(r io.Reader) (config, error) {
+	var raw map[string]interface{}
+	var c config
+	if _, err := toml.DecodeReader(r, &raw); err != nil {
+		return config{}, errors.Wrap(err, "Could not read config")
+	}
+
+	for key, value := range raw {
+		if key == "repo" {
+			if uri, ok := value.(string); ok {
+				c.Repo = uri
+			} else {
+				return c, errors.New("Invalid config, 'repo' should be uri")
+			}
+		} else {
+			if values, ok := value.(map[string]interface{}); ok {
+				e := ext.ExternalConfig{
+					ID:    key,
+					Extra: map[string]string{},
+				}
+				for valueKey, valueValue := range values {
+					if valueKey == "uri" {
+						e.URI = valueValue.(string)
+					} else if valueKey == "type" {
+						e.Type = valueValue.(string)
+					} else {
+						e.Extra[valueKey] = valueValue.(string)
+					}
+				}
+				if e.ID == "" || e.Type == "" || e.URI == "" {
+					return c, errors.New("Invalid config, id, type and uri is required for '" + key + "' ")
+				}
+				c.External = append(c.External, e)
+			} else {
+				return c, errors.New("Invalid config, '" + key + "' (external config) should be table")
+			}
+		}
 	}
 	return c, nil
+
 }
 
 func cmd(r ext.Repo, opts map[string]interface{}) {
