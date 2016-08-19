@@ -21,7 +21,7 @@ func newSQL(t, p string) (RepoBegin, error) {
 	_, err = db.Exec(`create table if not exists todo(
 		state text, message text,
 		repo text,
-		extID text,
+		ext_id text,
 		attr text)`)
 	if err != nil {
 		db.Close()
