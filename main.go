@@ -67,7 +67,7 @@ func main() {
 	}
 	mainLog.Debug("Args ", sortOpts(opts))
 
-	config, err := readConfig(opts["<cfg>"])
+	config, err := readConfig(opts["-c"])
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debug("%+v", err)
