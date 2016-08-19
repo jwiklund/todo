@@ -82,6 +82,10 @@ func (r *extRepo) Get(id string) (todo.Task, error) {
 	return r.repo.Get(id)
 }
 
+func (r *extRepo) GetByExternal(repo, extID string) (todo.Task, error) {
+	return r.repo.GetByExternal(repo, extID)
+}
+
 func (r *extRepo) Update(task todo.Task) error {
 	mod, err := r.ext.Handle(task)
 	if err != nil {

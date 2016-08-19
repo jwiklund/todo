@@ -23,11 +23,20 @@ func SyncHelper(r todo.RepoBegin, extID string, dryRun bool, externalCurrent, lo
 	missing := localIds.Difference(externalIds)
 	updated := updated(external, local)
 
+	rev, err := revived(r, extID, external, added)
+	if err != nil {
+		return err
+	}
+	for _, r := range rev {
+		added.Remove(r.Attr[extID+".id"])
+	}
+
 	if dryRun {
 		syncLog := logrus.WithField("comp", "ext.sync")
 		syncLog.Info("DRY RUN ", extID, " ADD ", added)
 		syncLog.Info("DRY RUN ", extID, " REM ", missing)
 		syncLog.Info("DRY RUN ", extID, " UPD ", updated)
+		syncLog.Info("DRY RUN ", extID, " REV ", rev)
 		return nil
 	}
 
@@ -44,6 +53,10 @@ func SyncHelper(r todo.RepoBegin, extID string, dryRun bool, externalCurrent, lo
 		return err
 	}
 	if err := syncUpdate(commitRepo, external, local, updated); err != nil {
+		commitRepo.Close()
+		return err
+	}
+	if err := syncRevive(commitRepo, rev); err != nil {
 		commitRepo.Close()
 		return err
 	}
@@ -66,6 +79,11 @@ func (i *indexedTasks) IDSet() mapset.Set {
 		r.Add(key)
 	}
 	return r
+}
+
+func (i *indexedTasks) GetByExternal(extID string) todo.Task {
+	index, _ := i.index[extID]
+	return i.tasks[index]
 }
 
 func currentSet(mapping map[int]int) mapset.Set {
@@ -96,6 +114,35 @@ func updated(external, local *indexedTasks) mapset.Set {
 	}
 
 	return updated
+}
+
+func merge(external, local todo.Task) todo.Task {
+	for key, value := range local.Attr {
+		if _, ok := external.Attr[key]; !ok {
+			external.Attr[key] = value
+		}
+	}
+	external.ID = local.ID
+	return external
+}
+
+func revived(r todo.Repo, extID string, external *indexedTasks, missing mapset.Set) ([]todo.Task, error) {
+	var result []todo.Task
+
+	for _, removed := range missing.ToSlice() {
+		r, err := r.GetByExternal(extID, removed.(string))
+		if err != nil {
+			if err != todo.ErrorNotFound {
+				return nil, err
+			}
+			// not found, ignore
+		} else {
+			// found, not revived
+			result = append(result, merge(external.GetByExternal(removed.(string)), r))
+		}
+	}
+
+	return result, nil
 }
 
 func syncAdd(r todo.Repo, extID string, external *indexedTasks, added mapset.Set) error {
@@ -134,6 +181,16 @@ func syncUpdate(r todo.Repo, external, local *indexedTasks, updated mapset.Set) 
 		l := local.tasks[localIndex]
 		l.Message = e.Message
 		err := r.Update(l)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func syncRevive(r todo.Repo, revived []todo.Task) error {
+	for _, t := range revived {
+		err := r.Update(t)
 		if err != nil {
 			return err
 		}

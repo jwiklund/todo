@@ -18,7 +18,6 @@ func (t *text) Sync(r todo.RepoBegin, dryRun bool) error {
 	externalTasks := tasksFor(t.id, t.source)
 
 	return internal.SyncHelper(r, t.id, dryRun, externalTasks, localTasks)
-
 }
 
 func tasksFor(id string, source [][]byte) []todo.Task {

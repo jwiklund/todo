@@ -9,6 +9,8 @@ import (
 
 var (
 	todoLog = logrus.WithField("comp", "todo")
+	// ErrorNotFound error returned when task was not found.
+	ErrorNotFound = errors.New("Task not found")
 )
 
 // State valid state, one of "todo", "doing", "waiting", done"
@@ -66,6 +68,7 @@ type Repo interface {
 	Add(string) (Task, error)
 	AddWithAttr(string, map[string]string) (Task, error)
 	Get(string) (Task, error)
+	GetByExternal(remoteID, externalID string) (Task, error)
 	Update(Task) error
 
 	Close() error

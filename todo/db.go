@@ -18,10 +18,20 @@ func newSQL(t, p string) (RepoBegin, error) {
 		return nil, errors.New(err.Error())
 	}
 
-	_, err = db.Exec(`create table if not exists todo(id text primary key, state text, message text, attr text)`)
+	_, err = db.Exec(`create table if not exists todo(
+		id text primary key,
+		state text, message text,
+		repo text,
+		extID text,
+		attr text)`)
 	if err != nil {
 		db.Close()
-		return nil, errors.New(err.Error())
+		return nil, errors.Wrap(err, "Could not create task table")
+	}
+	_, err = db.Exec(`create unique index if not exists external_idx on todo(repo, ext_id)`)
+	if err != nil {
+		db.Close()
+		return nil, errors.Wrap(err, "Could not create external index")
 	}
 	return &dbRepo{db}, nil
 }
@@ -84,6 +94,10 @@ func (d *dbRepo) Get(id string) (Task, error) {
 	return get(d.db, id)
 }
 
+func (d *dbRepo) GetByExternal(repo, extID string) (Task, error) {
+	return getByExternal(d.db, repo, extID)
+}
+
 type txRepo struct {
 	tx *sql.Tx
 }
@@ -118,6 +132,10 @@ func (t *txRepo) Update(task Task) error {
 
 func (t *txRepo) Get(id string) (Task, error) {
 	return get(t.tx, id)
+}
+
+func (t *txRepo) GetByExternal(repo, extID string) (Task, error) {
+	return getByExternal(t.tx, repo, extID)
 }
 
 func list(db dbOrTx) ([]Task, error) {
@@ -156,7 +174,11 @@ func add(db dbOrTx, message string, attr map[string]string) (Task, error) {
 	if err != nil {
 		return Task{}, errors.Wrap(err, "could not encode attr")
 	}
-	r, err := db.Exec("insert into todo(state, message, attr) values (?, ?, ?)", "todo", message, attrB)
+	repo, extID := getExternal(attr)
+	todoLog.Debugf("add state=%s,message=%s,repo=%s,ext_id=%s,attr=%s",
+		"todo", message, nullable(repo), nullable(extID), string(attrB))
+	r, err := db.Exec("insert into todo(state, message, repo, ext_id, attr) values (?, ?, ?, ?, ?)",
+		"todo", message, repo, extID, attrB)
 	if err != nil {
 		return Task{}, errors.Wrap(err, "could not write task")
 	}
@@ -172,22 +194,17 @@ func add(db dbOrTx, message string, attr map[string]string) (Task, error) {
 	}, nil
 }
 
-func get(db dbOrTx, id string) (Task, error) {
-	rows, err := db.Query("select rowid, state, message, attr from todo where rowid = ?", id)
-	if err != nil {
-		return Task{}, errors.New(err.Error())
-	}
-	defer rows.Close()
+func getByRows(rows *sql.Rows) (Task, error) {
 	if rows.Next() {
 		var rowid int64
 		var state string
 		var message string
 		var attrB []byte
-		err = rows.Scan(&rowid, &state, &message, &attrB)
-		todoLog.Debugf("get id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
+		err := rows.Scan(&rowid, &state, &message, &attrB)
 		if err != nil {
-			return Task{}, errors.New(err.Error())
+			return Task{}, errors.Wrap(err, "Could not scan row")
 		}
+		todoLog.Debugf("get id=%v,state=%s,message=%s,attr=%s", rowid, state, message, string(attrB))
 		attr, err := decodeAttr(attrB)
 		if err != nil {
 			return Task{}, errors.Wrap(err, "Could not decode attributes")
@@ -199,7 +216,31 @@ func get(db dbOrTx, id string) (Task, error) {
 			Attr:    attr,
 		}, nil
 	}
-	return Task{}, errors.New("Task not found")
+	return Task{}, ErrorNotFound
+}
+
+func get(db dbOrTx, id string) (Task, error) {
+	query := `select rowid, state, message, attr
+	            from todo
+			   where rowid = ?`
+	rows, err := db.Query(query, id)
+	if err != nil {
+		return Task{}, errors.New(err.Error())
+	}
+	defer rows.Close()
+	return getByRows(rows)
+}
+
+func getByExternal(db dbOrTx, repo, extID string) (Task, error) {
+	query := `select rowid, state, message, attr 
+	            from todo 
+	           where repo = ? and ext_id = ?`
+	rows, err := db.Query(query, repo, extID)
+	if err != nil {
+		return Task{}, errors.Wrap(err, "Could not query")
+	}
+	defer rows.Close()
+	return getByRows(rows)
 }
 
 func update(db dbOrTx, t Task) error {
@@ -207,9 +248,11 @@ func update(db dbOrTx, t Task) error {
 	if err != nil {
 		return errors.Wrap(err, "Could not encode attributes")
 	}
-	todoLog.Debugf("update id=%v,state=%s,message=%s,attr=%s", t.ID, t.State.String(), t.Message, string(attr))
-	r, err := db.Exec("update todo set state = ?, message = ?, attr = ? where rowid = ?",
-		t.State.String(), t.Message, attr, t.ID)
+	repo, extID := getExternal(t.Attr)
+	todoLog.Debugf("update id=%v,state=%s,message=%s,repo=%s,ext_id=%s,attr=%s",
+		t.ID, t.State.String(), t.Message, nullable(repo), nullable(extID), string(attr))
+	r, err := db.Exec("update todo set state = ?, message = ?, repo = ?, ext_id = ?, attr = ? where rowid = ?",
+		t.State.String(), t.Message, repo, extID, attr, t.ID)
 	if err != nil {
 		return errors.Wrap(err, "Could not update task")
 	}
@@ -217,6 +260,24 @@ func update(db dbOrTx, t Task) error {
 		return errors.New("Update failed, no rows affected")
 	}
 	return nil
+}
+func getExternal(a map[string]string) (*string, *string) {
+	repo, ok := a["external"]
+	if !ok {
+		return nil, nil
+	}
+	extID, ok := a[repo+".id"]
+	if !ok {
+		return nil, nil
+	}
+	return &repo, &extID
+}
+
+func nullable(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return *s
 }
 
 func encodeAttr(a map[string]string) ([]byte, error) {

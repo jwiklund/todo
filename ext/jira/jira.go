@@ -113,34 +113,33 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 			jiraLog.Debugf("%+v", res)
 			return task, nil
 		}
-	} else {
-		var labels []string
-		if t.label != "" {
-			labels = []string{t.label}
-		}
-		issue := jira.Issue{
-			Fields: &jira.IssueFields{
-				Summary: task.Message,
-				Type: jira.IssueType{
-					Name: "Story",
-				},
-				Project: jira.Project{
-					Key: "EX",
-				},
-				Labels: labels,
-			},
-		}
-		i, res, err := client.Issue.Create(&issue)
-		defer res.Body.Close()
-		if err != nil {
-			body, _ := ioutil.ReadAll(res.Body)
-			jiraLog.Debug("jira response ", string(body))
-			return task, errors.Wrap(err, "Could not create jira issue")
-		}
-		task.Attr[t.id+".id"] = i.Key
 		return task, nil
 	}
-	return task, errors.New("Invalid state")
+	var labels []string
+	if t.label != "" {
+		labels = []string{t.label}
+	}
+	issue := jira.Issue{
+		Fields: &jira.IssueFields{
+			Summary: task.Message,
+			Type: jira.IssueType{
+				Name: "Story",
+			},
+			Project: jira.Project{
+				Key: "EX",
+			},
+			Labels: labels,
+		},
+	}
+	i, res, err := client.Issue.Create(&issue)
+	defer res.Body.Close()
+	if err != nil {
+		body, _ := ioutil.ReadAll(res.Body)
+		jiraLog.Debug("jira response ", string(body))
+		return task, errors.Wrap(err, "Could not create jira issue")
+	}
+	task.Attr[t.id+".id"] = i.Key
+	return task, nil
 }
 
 func (t *extJira) Close() error {
