@@ -3,6 +3,8 @@ package text
 import (
 	"strconv"
 
+	"strings"
+
 	"github.com/jwiklund/todo/ext/internal"
 	"github.com/jwiklund/todo/todo"
 )
@@ -23,8 +25,12 @@ func (t *text) Sync(r todo.RepoBegin, dryRun bool) error {
 func tasksFor(id string, source [][]byte) []todo.Task {
 	var res []todo.Task
 	for i, message := range source {
+		m := strings.TrimSpace(string(message))
+		if m == "" {
+			continue
+		}
 		res = append(res, todo.Task{
-			Message: string(message),
+			Message: m,
 			Attr: map[string]string{
 				"external": id,
 				id + ".id": strconv.Itoa(i),

@@ -68,6 +68,10 @@ func (t *text) Handle(task todo.Task) (todo.Task, error) {
 			t.source[ind] = []byte(task.Message)
 			t.updated = true
 		}
+		if task.State == todo.StateFrom("done") {
+			t.source[ind] = []byte{}
+			t.updated = true
+		}
 	} else {
 		t.source = append(t.source, []byte(task.Message))
 		task.Attr[t.id+".id"] = strconv.Itoa(len(t.source) - 1)
