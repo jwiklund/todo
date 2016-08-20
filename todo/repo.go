@@ -13,8 +13,21 @@ var (
 	ErrorNotFound = errors.New("Task not found")
 )
 
-// State valid state, one of "todo", "doing", "waiting", done"
+// State valid state
 type State string
+
+var (
+	// StateTodo "todo"
+	StateTodo = State("todo")
+	// StateWaiting "waiting"
+	StateWaiting = State("waiting")
+	// StateDoing "doing"
+	StateDoing = State("doing")
+	// StateDone "done"
+	StateDone = State("done")
+	// States all states
+	States = []State{StateTodo, StateWaiting, StateDoing, StateDone}
+)
 
 func (s State) String() string {
 	return string(s)

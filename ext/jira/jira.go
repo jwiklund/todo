@@ -45,29 +45,42 @@ func New(id, url, user, pass string, extra map[string]string) (ext.External, err
 		return nil, errors.New("project is required for jira")
 	}
 	label, _ := extra["label"]
+	stateTransitions := map[string]string{}
+	for _, state := range todo.States {
+		if transition, ok := extra[state.String()+"_transition"]; ok {
+			stateTransitions[state.String()] = transition
+		}
+	}
 
-	return &extJira{id, project, label, nil, func() (*jira.Client, error) {
-		httpClient := http.Client{
-			Timeout: time.Duration(10 * time.Second),
-		}
-		jiraClient, err := jira.NewClient(&httpClient, url)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not create jira client")
-		}
-		_, err = jiraClient.Authentication.AcquireSessionCookie(user, pass)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not login to jira")
-		}
-		return jiraClient, nil
-	}}, nil
+	return &extJira{
+		id:          id,
+		project:     project,
+		label:       label,
+		transitions: stateTransitions,
+		cli:         nil,
+		clientFn: func() (*jira.Client, error) {
+			httpClient := http.Client{
+				Timeout: time.Duration(10 * time.Second),
+			}
+			jiraClient, err := jira.NewClient(&httpClient, url)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not create jira client")
+			}
+			_, err = jiraClient.Authentication.AcquireSessionCookie(user, pass)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not login to jira")
+			}
+			return jiraClient, nil
+		}}, nil
 }
 
 type extJira struct {
-	id       string
-	project  string
-	label    string
-	cli      *jira.Client
-	clientFn func() (*jira.Client, error)
+	id          string
+	project     string
+	label       string
+	transitions map[string]string
+	cli         *jira.Client
+	clientFn    func() (*jira.Client, error)
 }
 
 func (t *extJira) client() (*jira.Client, error) {
@@ -91,27 +104,22 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 		return task, err
 	}
 	if a := task.Attr[t.id+".id"]; a != "" {
-		issue, _, err := client.Issue.Get(a)
+		issue, res, err := client.Issue.Get(a)
 		if err != nil {
+			if res != nil {
+				res.Body.Close()
+			}
 			return task, errors.Wrap(err, "Could not get jira issue")
 		}
 		if issue.Fields.Summary != task.Message {
-			updated := struct {
-				Fields struct {
-					Summary string `json:"summary"`
-				} `json:"fields"`
-			}{}
-			updated.Fields.Summary = task.Message
-			req, _ := client.NewRequest("PUT", "/rest/api/2/issue/"+a, updated)
-			res, err := client.Do(req, nil)
-			defer res.Body.Close()
-			if err != nil {
-				body, _ := ioutil.ReadAll(res.Body)
-				jiraLog.Debug("Jira response ", string(body))
-				return task, errors.Wrap(err, "Could not update jira issue")
+			if err := t.updateJiraFields(a, task.Message, task.Attr); err != nil {
+				return task, err
 			}
-			jiraLog.Debugf("%+v", res)
-			return task, nil
+		}
+		if issue.Fields.Status.Name != jiraStatus(task.State) {
+			if err := t.updateJiraStatus(a, task.State); err != nil {
+				return task, err
+			}
 		}
 		return task, nil
 	}
@@ -143,5 +151,75 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 }
 
 func (t *extJira) Close() error {
+	return nil
+}
+
+func (t *extJira) updateJiraFields(extID string, message string, attr map[string]string) error {
+	updated := struct {
+		Fields struct {
+			Summary string `json:"summary,omitempty"`
+		} `json:"fields"`
+	}{}
+	client, err := t.client()
+	if err != nil {
+		return err
+	}
+	req, err := client.NewRequest("PUT", "/rest/api/2/issue/"+extID, updated)
+	if err != nil {
+		return errors.Wrap(err, "Could not create put request")
+	}
+	res, err := client.Do(req, nil)
+	defer res.Body.Close()
+	if err != nil {
+		body, _ := ioutil.ReadAll(res.Body)
+		jiraLog.Debug("Jira response ", string(body))
+		return errors.Wrap(err, "Could not update jira issue")
+	}
+	jiraLog.Debugf("%+v", res)
+	return nil
+}
+
+func jiraStatus(state todo.State) string {
+	switch state {
+	case todo.StateTodo:
+		return "To Do"
+	case todo.StateDoing:
+		return "In Progress"
+	case todo.StateWaiting:
+		return "To Do"
+	case todo.StateDone:
+		return "Done"
+	default:
+		return "To Do"
+	}
+}
+
+func (t *extJira) updateJiraStatus(extID string, state todo.State) error {
+	transition := struct {
+		Transition struct {
+			ID string `json:"id"`
+		} `json:"transition"`
+	}{}
+	transitionID, ok := t.transitions[state.String()]
+	if !ok {
+		return errors.New("No transition for state " + state.String())
+	}
+	transition.Transition.ID = transitionID
+	client, err := t.client()
+	if err != nil {
+		return err
+	}
+	path := "/rest/api/2/issue/" + extID + "/transitions"
+	req, err := client.NewRequest("POST", path, &transition)
+	if err != nil {
+		return errors.Wrap(err, "Could not create update request")
+	}
+	res, err := client.Do(req, nil)
+	if res != nil {
+		defer res.Body.Close()
+	}
+	if err != nil {
+		return errors.Wrap(err, "Could not update state")
+	}
 	return nil
 }
