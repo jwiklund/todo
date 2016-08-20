@@ -33,6 +33,8 @@ func SyncHelper(r todo.RepoBegin, extID string, dryRun bool, externalCurrent, lo
 
 	if dryRun {
 		syncLog := logrus.WithField("comp", "ext.sync")
+		syncLog.Infof("DRY RUN EXT %+v", externalCurrent)
+		syncLog.Infof("DRY RUN LOC %+v", localCurrent)
 		syncLog.Info("DRY RUN ", extID, " ADD ", added)
 		syncLog.Info("DRY RUN ", extID, " REM ", missing)
 		syncLog.Info("DRY RUN ", extID, " UPD ", updated)
@@ -107,9 +109,13 @@ func updated(external, local *indexedTasks) mapset.Set {
 
 	for externalKey, externalIndex := range external.index {
 		if localIndex, ok := local.index[externalKey]; ok {
-			if external.tasks[externalIndex].Message != local.tasks[localIndex].Message {
+			e := external.tasks[externalIndex]
+			l := local.tasks[localIndex]
+
+			if e.Message != e.Message || e.State != l.State {
 				updated.Add(externalKey)
 			}
+
 		}
 	}
 
@@ -180,6 +186,7 @@ func syncUpdate(r todo.Repo, external, local *indexedTasks, updated mapset.Set) 
 		e := external.tasks[externalIndex]
 		l := local.tasks[localIndex]
 		l.Message = e.Message
+		l.State = e.State
 		err := r.Update(l)
 		if err != nil {
 			return err

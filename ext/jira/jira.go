@@ -168,6 +168,7 @@ func (t *extJira) updateJiraFields(extID string, message string, attr map[string
 	if err != nil {
 		return errors.Wrap(err, "Could not create put request")
 	}
+	jiraLog.Debugf("PUT /rest/api/2/issue/%s %+v", extID, updated)
 	res, err := client.Do(req, nil)
 	defer res.Body.Close()
 	if err != nil {
@@ -177,21 +178,6 @@ func (t *extJira) updateJiraFields(extID string, message string, attr map[string
 	}
 	jiraLog.Debugf("%+v", res)
 	return nil
-}
-
-func jiraStatus(state todo.State) string {
-	switch state {
-	case todo.StateTodo:
-		return "To Do"
-	case todo.StateDoing:
-		return "In Progress"
-	case todo.StateWaiting:
-		return "To Do"
-	case todo.StateDone:
-		return "Done"
-	default:
-		return "To Do"
-	}
 }
 
 func (t *extJira) updateJiraStatus(extID string, state todo.State) error {
@@ -214,6 +200,7 @@ func (t *extJira) updateJiraStatus(extID string, state todo.State) error {
 	if err != nil {
 		return errors.Wrap(err, "Could not create update request")
 	}
+	jiraLog.Debug("POST /rest/api/2/issue/%s/transitions %+v", extID, transition)
 	res, err := client.Do(req, nil)
 	if res != nil {
 		defer res.Body.Close()

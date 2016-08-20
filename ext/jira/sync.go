@@ -39,6 +39,7 @@ func tasksFor(extID string, issues []jira.Issue) []todo.Task {
 	for _, issue := range issues {
 		res = append(res, todo.Task{
 			Message: issue.Fields.Summary,
+			State:   jiraState(issue.Fields.Status.Name),
 			Attr: map[string]string{
 				"external":    extID,
 				extID + ".id": issue.Key,

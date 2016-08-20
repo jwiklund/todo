@@ -31,6 +31,7 @@ func tasksFor(id string, source [][]byte) []todo.Task {
 		}
 		res = append(res, todo.Task{
 			Message: m,
+			State:   todo.StateTodo,
 			Attr: map[string]string{
 				"external": id,
 				id + ".id": strconv.Itoa(i),
