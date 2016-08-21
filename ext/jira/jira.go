@@ -134,7 +134,7 @@ func (t *extJira) Handle(task todo.Task) (todo.Task, error) {
 				Name: "Story",
 			},
 			Project: jira.Project{
-				Key: "EX",
+				Key: t.project,
 			},
 			Labels: labels,
 		},

@@ -50,7 +50,7 @@ func update(r ext.Repo, id string, message []string, state, key, value string) {
 		mainLog.Debugf("%+v", err)
 		return
 	}
-	if message != nil {
+	if len(message) != 0 {
 		task.Message = strings.Join(message, " ")
 	}
 	if state != "" {

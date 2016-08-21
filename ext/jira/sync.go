@@ -20,8 +20,11 @@ func (t *extJira) Sync(r todo.RepoBegin, dryRun bool) error {
 		return err
 	}
 
-	// TODO add project and labels
-	issues, res, err := client.Issue.Search("status != Done", nil)
+	query := "status != Done AND project = " + t.project
+	if t.label != "" {
+		query = query + " AND labels = " + t.label
+	}
+	issues, res, err := client.Issue.Search(query, nil)
 	defer res.Body.Close()
 	if err != nil {
 		body, _ := ioutil.ReadAll(res.Body)
