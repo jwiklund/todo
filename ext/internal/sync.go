@@ -112,7 +112,7 @@ func updated(external, local *indexedTasks) mapset.Set {
 			e := external.tasks[externalIndex]
 			l := local.tasks[localIndex]
 
-			if e.Message != e.Message || e.State != l.State {
+			if e.Message != l.Message || e.State != l.State {
 				updated.Add(externalKey)
 			}
 
@@ -170,7 +170,7 @@ func syncRemove(r todo.Repo, local *indexedTasks, missing mapset.Set) error {
 	for _, rem := range missing.ToSlice() {
 		index := local.index[rem.(string)]
 		t := local.tasks[index]
-		t.State = todo.StateFrom("done")
+		t.State = todo.StateDone
 		err := r.Update(t)
 		if err != nil {
 			return err

@@ -68,7 +68,7 @@ func (t *text) Handle(task todo.Task) (todo.Task, error) {
 			t.source[ind] = []byte(task.Message)
 			t.updated = true
 		}
-		if task.State == todo.StateFrom("done") {
+		if task.State == todo.StateDone {
 			t.source[ind] = []byte{}
 			t.updated = true
 		}

@@ -52,6 +52,18 @@ func (r *Fake) Get(id string) (todo.Task, error) {
 	return todo.Task{}, errors.New("not found")
 }
 
+// GetByExternal return task by external id
+func (r *Fake) GetByExternal(repo, extID string) (todo.Task, error) {
+	for _, t := range r.todos {
+		if ex, ok := t.Attr["external"]; ok && ex == repo {
+			if eid, ok := t.Attr[ex+".id"]; ok && extID == eid {
+				return t, nil
+			}
+		}
+	}
+	return todo.Task{}, todo.ErrorNotFound
+}
+
 // MustGet return task or empty
 func (r *Fake) MustGet(id string) todo.Task {
 	for _, t := range r.todos {
@@ -73,7 +85,7 @@ func (r *Fake) AddWithAttr(message string, attr map[string]string) (todo.Task, e
 		ID:      strconv.Itoa(len(r.todos)),
 		Message: message,
 		Attr:    attr,
-		State:   todo.StateFrom("todo"),
+		State:   todo.StateTodo,
 	}
 	r.todos = append(r.todos, task)
 	return task, nil
