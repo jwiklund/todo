@@ -15,20 +15,17 @@ func (t *extJira) Sync(r todo.RepoBegin, dryRun bool) error {
 		return err
 	}
 
-	client, err := t.client()
-	if err != nil {
-		return err
-	}
-
 	query := "status != Done AND project = " + t.project
 	if t.label != "" {
 		query = query + " AND labels = " + t.label
 	}
-	issues, res, err := client.Issue.Search(query, nil)
-	defer res.Body.Close()
+	issues, res, err := t.client.Issue.Search(query, nil)
 	if err != nil {
-		body, _ := ioutil.ReadAll(res.Body)
-		jiraLog.Debug("Jira response ", string(body))
+		if res != nil {
+			body, _ := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			jiraLog.Debug("Jira response ", string(body))
+		}
 		return errors.Wrap(err, "Could not list issues")
 	}
 
