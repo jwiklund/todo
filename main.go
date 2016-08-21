@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 
+	"github.com/BurntSushi/toml"
+	"github.com/Sirupsen/logrus"
+	opt "github.com/docopt/docopt-go"
 	"github.com/jwiklund/todo/ext"
 	_ "github.com/jwiklund/todo/ext/jira"
 	_ "github.com/jwiklund/todo/ext/text"
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/util"
-
-	"github.com/BurntSushi/toml"
-	"github.com/Sirupsen/logrus"
-	opt "github.com/docopt/docopt-go"
 	"github.com/pkg/errors"
 )
 
@@ -95,6 +95,7 @@ func sortOpts(opts map[string]interface{}) string {
 	for key := range opts {
 		keys = append(keys, key)
 	}
+	sort.Strings(keys)
 	for i, key := range keys {
 		if i != 0 {
 			res.WriteString(" ")
