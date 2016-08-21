@@ -77,11 +77,7 @@ func (d *dbRepo) List() ([]Task, error) {
 	return list(d.db)
 }
 
-func (d *dbRepo) Add(message string) (Task, error) {
-	return add(d.db, message, nil)
-}
-
-func (d *dbRepo) AddWithAttr(message string, attr map[string]string) (Task, error) {
+func (d *dbRepo) Add(message string, attr map[string]string) (Task, error) {
 	return add(d.db, message, attr)
 }
 
@@ -117,11 +113,7 @@ func (t *txRepo) List() ([]Task, error) {
 	return list(t.tx)
 }
 
-func (t *txRepo) Add(message string) (Task, error) {
-	return add(t.tx, message, nil)
-}
-
-func (t *txRepo) AddWithAttr(message string, attr map[string]string) (Task, error) {
+func (t *txRepo) Add(message string, attr map[string]string) (Task, error) {
 	return add(t.tx, message, attr)
 }
 

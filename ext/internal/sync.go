@@ -155,7 +155,7 @@ func syncAdd(r todo.Repo, extID string, external *indexedTasks, added mapset.Set
 	for _, add := range added.ToSlice() {
 		index := external.index[add.(string)]
 		addedMessage := external.tasks[index].Message
-		_, err := r.AddWithAttr(addedMessage, map[string]string{
+		_, err := r.Add(addedMessage, map[string]string{
 			"external":    extID,
 			extID + ".id": add.(string),
 		})

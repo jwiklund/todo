@@ -48,23 +48,8 @@ func (r *extRepo) List() ([]todo.Task, error) {
 	return r.repo.List()
 }
 
-func (r *extRepo) Add(message string) (todo.Task, error) {
-	task, err := r.repo.Add(message)
-	if err != nil {
-		return task, err
-	}
-	upd, err := r.ext.Handle(task)
-	if err != nil {
-		return upd, err
-	}
-	if !task.Equal(upd) {
-		return upd, r.repo.Update(upd)
-	}
-	return upd, nil
-}
-
-func (r *extRepo) AddWithAttr(message string, attr map[string]string) (todo.Task, error) {
-	task, err := r.repo.AddWithAttr(message, attr)
+func (r *extRepo) Add(message string, attr map[string]string) (todo.Task, error) {
+	task, err := r.repo.Add(message, attr)
 	if err != nil {
 		return task, err
 	}

@@ -78,8 +78,7 @@ func (t Task) IsCurrent() bool {
 // Repo a todo repository
 type Repo interface {
 	List() ([]Task, error)
-	Add(string) (Task, error)
-	AddWithAttr(string, map[string]string) (Task, error)
+	Add(string, map[string]string) (Task, error)
 	Get(string) (Task, error)
 	GetByExternal(remoteID, externalID string) (Task, error)
 	Update(Task) error

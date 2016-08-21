@@ -39,7 +39,7 @@ func TestSyncAddSingle(t *testing.T) {
 
 func TestSyncSingle(t *testing.T) {
 	r := fake.New()
-	r.AddWithAttr("line", map[string]string{
+	r.Add("line", map[string]string{
 		"external": "text",
 		"text.id":  "0",
 	})
@@ -53,7 +53,7 @@ func TestSyncSingle(t *testing.T) {
 
 func TestSyncUpdate(t *testing.T) {
 	r := fake.New()
-	r.AddWithAttr("original", map[string]string{
+	r.Add("original", map[string]string{
 		"external": "text",
 		"text.id":  "0",
 	})
@@ -77,7 +77,7 @@ func TestSyncUpdate(t *testing.T) {
 
 func TestSyncDoubleLine(t *testing.T) {
 	r := fake.New()
-	r.AddWithAttr("original", map[string]string{
+	r.Add("original", map[string]string{
 		"external": "text",
 		"text.id":  "0",
 	})

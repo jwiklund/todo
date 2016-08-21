@@ -75,12 +75,7 @@ func (r *Fake) MustGet(id string) todo.Task {
 }
 
 // Add create task
-func (r *Fake) Add(message string) (todo.Task, error) {
-	return r.AddWithAttr(message, make(map[string]string))
-}
-
-// AddWithAttr create task
-func (r *Fake) AddWithAttr(message string, attr map[string]string) (todo.Task, error) {
+func (r *Fake) Add(message string, attr map[string]string) (todo.Task, error) {
 	task := todo.Task{
 		ID:      strconv.Itoa(len(r.todos)),
 		Message: message,
