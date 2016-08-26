@@ -5,10 +5,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-// External storage interface
+// External (single) storage interface
 type External interface {
 	Handle(task todo.Task) (todo.Task, error)
 	Sync(r todo.RepoBegin, dryRun bool) error
+	Close() error
+}
+
+// Externals storage interface
+type Externals interface {
+	Handle(task todo.Task) (todo.Task, error)
+	SyncAll(r todo.RepoBegin, dryRun bool) error
+	Sync(r todo.RepoBegin, name string, dryRun bool) error
 	Close() error
 }
 

@@ -10,6 +10,11 @@ type Repo interface {
 	SyncAll(dryRun bool) error
 }
 
+// New configure an External
+func New(config []ExternalConfig) (Externals, error) {
+	return configure(config)
+}
+
 // ExternalRepo wrap a repo with external handling
 func ExternalRepo(repo todo.RepoBegin, config []ExternalConfig) (Repo, error) {
 	external, err := configure(config)

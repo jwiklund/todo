@@ -3,12 +3,12 @@ package main
 import (
 	"strings"
 
-	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
+	"github.com/jwiklund/todo/view"
 )
 
 // todo [-v][-r <repo>] update <id> [-a <key> [<value>]][<state>]
-func updateCmd(r ext.Repo, opts map[string]interface{}) {
+func updateCmd(t view.Todo, opts map[string]interface{}) {
 	state := ""
 	if s := opts["<state>"]; s != nil {
 		state = s.(string)
@@ -25,26 +25,26 @@ func updateCmd(r ext.Repo, opts map[string]interface{}) {
 	if m := opts["<message>"]; m != nil {
 		message = m.([]string)
 	}
-	update(r, opts["<id>"].(string), message, state, key, value)
+	update(t, opts["<id>"].(string), message, state, key, value)
 }
 
 //  todo [-v][-r <repo>] do <id>
-func doCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), nil, "doing", "", "")
+func doCmd(t view.Todo, opts map[string]interface{}) {
+	update(t, opts["<id>"].(string), nil, "doing", "", "")
 }
 
 //  todo [-v][-r <repo>] wait <id>
-func waitCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), nil, "waiting", "", "")
+func waitCmd(t view.Todo, opts map[string]interface{}) {
+	update(t, opts["<id>"].(string), nil, "waiting", "", "")
 }
 
 //  todo [-v][-r <repo>] done <id>
-func doneCmd(r ext.Repo, opts map[string]interface{}) {
-	update(r, opts["<id>"].(string), nil, "done", "", "")
+func doneCmd(t view.Todo, opts map[string]interface{}) {
+	update(t, opts["<id>"].(string), nil, "done", "", "")
 }
 
-func update(r ext.Repo, id string, message []string, state, key, value string) {
-	task, err := r.Get(id)
+func update(t view.Todo, id string, message []string, state, key, value string) {
+	task, err := t.Get(id)
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debugf("%+v", err)
@@ -66,11 +66,11 @@ func update(r ext.Repo, id string, message []string, state, key, value string) {
 			task.Attr[key] = value
 		}
 	}
-	err = r.Update(task)
+	err = t.Update(task)
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debugf("%+v", err)
 		return
 	}
-	list(r, false, "")
+	list(t, false, "")
 }

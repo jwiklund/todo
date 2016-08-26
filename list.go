@@ -4,20 +4,20 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
+	"github.com/jwiklund/todo/view"
 )
 
 //  todo [-av][-r <repo>]
 //  todo [-av][-r <repo>] list
-func listCmd(r ext.Repo, opts map[string]interface{}) {
+func listCmd(t view.Todo, opts map[string]interface{}) {
 	all := opts["-a"].(bool)
 	state, _ := opts["<state>"].(string)
-	list(r, all, state)
+	list(t, all, state)
 }
 
-func list(r ext.Repo, all bool, state string) {
-	tasks, err := r.List()
+func list(t view.Todo, all bool, state string) {
+	tasks, err := t.List()
 	if err != nil {
 		mainLog.Error("Couldn't list tasks ", err.Error())
 		mainLog.Debugf("%+v", err)

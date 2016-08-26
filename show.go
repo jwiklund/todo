@@ -5,12 +5,12 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/jwiklund/todo/ext"
+	"github.com/jwiklund/todo/view"
 )
 
 //  todo [-v][-r <repo>] show <id>
-func showCmd(r ext.Repo, opts map[string]interface{}) {
-	task, err := r.Get(opts["<id>"].(string))
+func showCmd(t view.Todo, opts map[string]interface{}) {
+	task, err := t.Get(opts["<id>"].(string))
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debugf("%+v", err)

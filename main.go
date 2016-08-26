@@ -15,6 +15,7 @@ import (
 	_ "github.com/jwiklund/todo/ext/text"
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/util"
+	"github.com/jwiklund/todo/view"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +41,7 @@ Options:
 `
 var mainLog = logrus.WithField("comp", "main")
 
-var cmds = map[string]func(ext.Repo, map[string]interface{}){
+var cmds = map[string]func(view.Todo, map[string]interface{}){
 	"list":   listCmd,
 	"add":    addCmd,
 	"update": updateCmd,
@@ -54,6 +55,7 @@ var cmds = map[string]func(ext.Repo, map[string]interface{}){
 type config struct {
 	External []ext.ExternalConfig
 	Repo     string
+	State    string
 }
 
 func main() {
@@ -79,14 +81,29 @@ func main() {
 		return
 	}
 
-	extRepo, err := ext.ExternalRepo(repo, config.External)
+	exts, err := ext.New(config.External)
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debug("%+v", err)
 		return
 	}
-	cmd(extRepo, opts)
-	mainLog.Debugf("Close returned %v", extRepo.Close())
+
+	state, err := state(config.State)
+	if err != nil {
+		mainLog.Error(err.Error())
+		mainLog.Debug("%+v", err)
+		return
+	}
+
+	todo, err := view.New(repo, exts, state)
+	if err != nil {
+		mainLog.Error(err.Error())
+		mainLog.Debug("%+v", err)
+		return
+	}
+
+	cmd(todo, opts)
+	mainLog.Debugf("Close returned %v", todo.Close())
 }
 
 func sortOpts(opts map[string]interface{}) string {
@@ -116,6 +133,34 @@ func repo(path string) todo.RepoBegin {
 		return nil
 	}
 	return repo
+}
+
+func state(path string) (view.State, error) {
+	if path == "" {
+		path = "~/.todo.state"
+	}
+	path = util.Expand(path)
+	stat, err := os.Stat(path)
+	if err != nil {
+		mainLog.Debug("State file not found, using no state", err)
+		return view.StateFromMap(nil), nil
+	}
+	if stat.IsDir() {
+		return nil, errors.Wrap(err, "State is a directory")
+	}
+
+	f, e := os.Open(path)
+	if e != nil {
+		return nil, errors.Wrap(e, "Could not open state file")
+	}
+	defer f.Close()
+
+	var raw map[string]string
+	if _, err := toml.DecodeReader(f, &raw); err != nil {
+		return config{}, errors.Wrap(err, "Could not read state")
+	}
+
+	return view.StateFromMap(raw), nil
 }
 
 func readConfig(path interface{}) (config, error) {
@@ -185,12 +230,12 @@ func readConfigToml(r io.Reader) (config, error) {
 
 }
 
-func cmd(r ext.Repo, opts map[string]interface{}) {
+func cmd(t view.Todo, opts map[string]interface{}) {
 	for key, cmd := range cmds {
 		if opts[key].(bool) {
-			cmd(r, opts)
+			cmd(t, opts)
 			return
 		}
 	}
-	listCmd(r, opts)
+	listCmd(t, opts)
 }
