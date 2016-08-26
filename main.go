@@ -88,7 +88,7 @@ func main() {
 		return
 	}
 
-	state, err := state(config.State)
+	state, statePath, err := state(config.State)
 	if err != nil {
 		mainLog.Error(err.Error())
 		mainLog.Debug("%+v", err)
@@ -103,6 +103,8 @@ func main() {
 	}
 
 	cmd(todo, opts)
+	saveState(statePath, state)
+
 	mainLog.Debugf("Close returned %v", todo.Close())
 }
 
@@ -135,7 +137,8 @@ func repo(path string) todo.RepoBegin {
 	return repo
 }
 
-func state(path string) (view.State, error) {
+func state(path string) (view.State, string, error) {
+	var state view.State
 	if path == "" {
 		path = "~/.todo.state"
 	}
@@ -143,24 +146,33 @@ func state(path string) (view.State, error) {
 	stat, err := os.Stat(path)
 	if err != nil {
 		mainLog.Debug("State file not found, using no state", err)
-		return view.StateFromMap(nil), nil
+		return state, path, nil
 	}
 	if stat.IsDir() {
-		return nil, errors.Wrap(err, "State is a directory")
+		return state, "", errors.Wrap(err, "State is a directory")
 	}
 
 	f, e := os.Open(path)
 	if e != nil {
-		return nil, errors.Wrap(e, "Could not open state file")
+		return state, "", errors.Wrap(e, "Could not open state file")
 	}
 	defer f.Close()
 
-	var raw map[string]string
-	if _, err := toml.DecodeReader(f, &raw); err != nil {
-		return config{}, errors.Wrap(err, "Could not read state")
+	if _, err := toml.DecodeReader(f, &state); err != nil {
+		return state, "", errors.Wrap(err, "Could not read state")
 	}
 
-	return view.StateFromMap(raw), nil
+	return state, path, nil
+}
+
+func saveState(path string, state view.State) error {
+	f, e := os.Open(path)
+	if e != nil {
+		return errors.Wrap(e, "Could not write state")
+	}
+	encoder := toml.NewEncoder(f)
+	encoder.Encode(state)
+	return f.Close()
 }
 
 func readConfig(path interface{}) (config, error) {

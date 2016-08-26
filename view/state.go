@@ -1,10 +1,7 @@
 package view
 
 // State view state
-type State interface {
-}
-
-// StateFromMap create state from map
-func StateFromMap(map[string]string) State {
-	return nil
+type State struct {
+	// Mapping from view ids to task id
+	Mapping map[string]string
 }
