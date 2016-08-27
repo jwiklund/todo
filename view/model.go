@@ -1,8 +1,6 @@
 package view
 
 import (
-	"strconv"
-
 	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
 )
@@ -39,15 +37,7 @@ func (t *view) List() ([]todo.Task, error) {
 	if err != nil {
 		return ts, err
 	}
-	r := make([]todo.Task, len(ts))
-	t.state.Mapping = map[string]string{}
-	for i, task := range ts {
-		r[i] = task
-		relID := strconv.Itoa(i)
-		t.state.Mapping[relID] = r[i].ID
-		r[i].ID = relID
-	}
-	return r, nil
+	return t.state.Remapp(ts)
 }
 
 // Add return task with absolute id
