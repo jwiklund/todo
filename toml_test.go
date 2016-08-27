@@ -5,7 +5,11 @@ import (
 
 	"strings"
 
+	"bytes"
+
+	"github.com/BurntSushi/toml"
 	"github.com/jwiklund/todo/ext"
+	"github.com/jwiklund/todo/view"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,4 +61,18 @@ func TestInvalidExternal(t *testing.T) {
 	[id1]
 	`))
 	assert.NotNil(t, e)
+}
+
+func TestWriteState(t *testing.T) {
+	state := view.State{
+		Mapping: map[string]string{
+			"0": "1",
+		},
+	}
+	bs := bytes.Buffer{}
+	e := toml.NewEncoder(&bs)
+	if !assert.Nil(t, e.Encode(state)) {
+		return
+	}
+	assert.Equal(t, "[Mapping]\n  0 = \"1\"\n", bs.String())
 }

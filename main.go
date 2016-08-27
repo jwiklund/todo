@@ -103,7 +103,10 @@ func main() {
 	}
 
 	cmd(todo, opts)
-	saveState(statePath, state)
+	err = saveState(statePath, todo.State())
+	if err != nil {
+		mainLog.Errorf("%+v", err)
+	}
 
 	mainLog.Debugf("Close returned %v", todo.Close())
 }
@@ -166,12 +169,16 @@ func state(path string) (view.State, string, error) {
 }
 
 func saveState(path string, state view.State) error {
-	f, e := os.Open(path)
+	f, e := os.Create(path)
 	if e != nil {
 		return errors.Wrap(e, "Could not write state")
 	}
 	encoder := toml.NewEncoder(f)
-	encoder.Encode(state)
+	err := encoder.Encode(state)
+	if err != nil {
+		f.Close()
+		return err
+	}
 	return f.Close()
 }
 
