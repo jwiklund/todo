@@ -10,7 +10,6 @@ import (
 	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/util"
-	"github.com/ngaut/log"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +26,7 @@ func New(id, path string) (ext.External, error) {
 	stat, err := os.Stat(path)
 	var source [][]byte
 	if err != nil {
-		log.Debug("Export file not found", err)
+		textLog.Debug("Export file not found", err)
 	} else if stat.IsDir() {
 		return nil, errors.New("text export is directory")
 	} else {
