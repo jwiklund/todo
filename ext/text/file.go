@@ -24,22 +24,28 @@ func init() {
 // New create a new file mirror
 func New(id, path string) (ext.External, error) {
 	stat, err := os.Stat(path)
-	var source [][]byte
+	var input []byte
 	if err != nil {
 		textLog.Debug("Export file not found", err)
 	} else if stat.IsDir() {
 		return nil, errors.New("text export is directory")
 	} else {
-		input, err := ioutil.ReadFile(path)
+		input, err = ioutil.ReadFile(path)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not open exported text")
 		}
-		source = bytes.Split(input, []byte("\n"))
-		if len(source) > 0 && len(source[len(source)-1]) == 0 {
-			source = source[0 : len(source)-1]
-		}
 	}
-	return &text{id, path, false, source}, nil
+	return newText(id, path, input), nil
+}
+
+func newText(id, path string, input []byte) *text {
+	var source [][]byte
+	if input == nil {
+		source = make([][]byte, 0)
+	} else {
+		source = bytes.Split(input, []byte("\n"))
+	}
+	return &text{id, path, false, source}
 }
 
 type text struct {
