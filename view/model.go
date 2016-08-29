@@ -1,6 +1,8 @@
 package view
 
 import (
+	"sort"
+
 	"github.com/jwiklund/todo/ext"
 	"github.com/jwiklund/todo/todo"
 )
@@ -37,6 +39,7 @@ func (t *view) List() ([]todo.Task, error) {
 	if err != nil {
 		return ts, err
 	}
+	sort.Sort(sorter(ts))
 	return t.state.Remapp(ts)
 }
 
