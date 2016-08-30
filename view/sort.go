@@ -21,6 +21,7 @@ func (s sorter) Swap(i, j int) {
 func (s sorter) Less(i, j int) bool {
 	p1 := prio(s[i])
 	p2 := prio(s[j])
+
 	if p1 < p2 {
 		return true
 	}
