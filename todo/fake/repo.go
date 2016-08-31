@@ -86,6 +86,12 @@ func (r *Fake) Add(message string, attr map[string]string) (todo.Task, error) {
 	return task, nil
 }
 
+// MustAdd create task
+func (r *Fake) MustAdd(message string, attr map[string]string) todo.Task {
+	t, _ := r.Add(message, attr)
+	return t
+}
+
 // Update update task
 func (r *Fake) Update(newTask todo.Task) error {
 	for i, task := range r.todos {
@@ -95,4 +101,12 @@ func (r *Fake) Update(newTask todo.Task) error {
 		}
 	}
 	return errors.New("task not found")
+}
+
+// MustUpdate update task
+func (r *Fake) MustUpdate(newTask todo.Task) {
+	err := r.Update(newTask)
+	if err != nil {
+		panic(err)
+	}
 }
