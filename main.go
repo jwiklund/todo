@@ -32,6 +32,7 @@ Usage:
   todo [(-c <cfg>) -v] do <id>
   todo [(-c <cfg>) -v] wait <id>
   todo [(-c <cfg>) -v] done <id>
+  todo [(-c <cfg>) -v] prio <id> [<prio>]
     
 Options:
   -a          include all tasks [default false]
@@ -50,6 +51,7 @@ var cmds = map[string]func(view.Todo, map[string]interface{}){
 	"do":     doCmd,
 	"wait":   waitCmd,
 	"done":   doneCmd,
+	"prio":   prioCmd,
 }
 
 type config struct {
