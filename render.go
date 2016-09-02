@@ -12,8 +12,7 @@ import (
 func renderList(ts []todo.Task, out io.Writer) {
 	w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
 	for _, task := range ts {
-		w.Write([]byte(render(task)))
-		w.Write([]byte{'\n'})
+		fmt.Fprintf(w, "(%s)\t%s\t%s\n", task.ID, task.State.String(), task.Message)
 	}
 	w.Flush()
 }
