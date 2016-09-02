@@ -9,7 +9,7 @@ import (
 
 // Todo a task repository view model
 type Todo interface {
-	List() ([]todo.Task, error)
+	List(filter func(todo.Task) bool) ([]todo.Task, error)
 	Add(string, map[string]string) (todo.Task, error)
 	Get(string) (todo.Task, error)
 	Update(todo.Task) error
@@ -34,13 +34,19 @@ func New(repo todo.RepoBegin, ext ext.Externals, state State) (Todo, error) {
 }
 
 // List todo tasks, with relative ids, resets relative ids
-func (t *view) List() ([]todo.Task, error) {
+func (t *view) List(filter func(todo.Task) bool) ([]todo.Task, error) {
 	ts, err := t.repo.List()
 	if err != nil {
 		return ts, err
 	}
-	sort.Sort(sorter(ts))
-	return t.state.Remapp(ts)
+	filtered := make([]todo.Task, len(ts))[0:0]
+	for _, t := range ts {
+		if filter(t) {
+			filtered = append(filtered, t)
+		}
+	}
+	sort.Sort(sorter(filtered))
+	return t.state.Remapp(filtered)
 }
 
 // Add return task with absolute id

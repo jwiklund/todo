@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"text/tabwriter"
 
 	"github.com/jwiklund/todo/todo"
 	"github.com/jwiklund/todo/view"
@@ -17,12 +16,6 @@ func listCmd(t view.Todo, opts map[string]interface{}) {
 }
 
 func list(t view.Todo, all bool, state string) {
-	tasks, err := t.List()
-	if err != nil {
-		mainLog.Error("Couldn't list tasks ", err.Error())
-		mainLog.Debugf("%+v", err)
-		return
-	}
 	filter := func(t todo.Task) bool {
 		return true
 	}
@@ -39,12 +32,11 @@ func list(t view.Todo, all bool, state string) {
 			return oldFilter(t) && t.State == verifiedState
 		}
 	}
-	w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
-	for _, task := range tasks {
-		if filter(task) {
-			w.Write([]byte(task.String()))
-			w.Write([]byte{'\n'})
-		}
+	tasks, err := t.List(filter)
+	if err != nil {
+		mainLog.Error("Couldn't list tasks ", err.Error())
+		mainLog.Debugf("%+v", err)
+		return
 	}
-	w.Flush()
+	renderList(tasks, os.Stdout)
 }
