@@ -65,7 +65,7 @@ func (t *view) Add(message string, attr map[string]string) (todo.Task, error) {
 	return upd, nil
 }
 
-// Get from relative ID
+// Get from relative ID, return with relative id
 func (t *view) Get(id string) (todo.Task, error) {
 	aid, err := t.state.ToDB(id)
 	if err != nil {
@@ -75,11 +75,8 @@ func (t *view) Get(id string) (todo.Task, error) {
 	if err != nil {
 		return raw, err
 	}
-	rel, err := t.state.Remapp([]todo.Task{raw})
-	if err != nil {
-		return raw, err
-	}
-	return rel[0], nil
+	raw.ID = id
+	return raw, nil
 }
 
 // Update uses task with relative ID
