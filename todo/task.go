@@ -1,6 +1,9 @@
 package todo
 
-import "reflect"
+import (
+	"reflect"
+	"strconv"
+)
 
 // Task a todo task
 type Task struct {
@@ -43,4 +46,23 @@ func (t Task) SetExternalID(externalID string) {
 		return
 	}
 	t.Attr[t.External()+".id"] = externalID
+}
+
+// Prio get the prio of this task
+func (t Task) Prio() int {
+	prio, _ := t.Attr["prio"]
+	if prio == "" {
+		return 1000
+	}
+	prioInt, err := strconv.Atoi(prio)
+	if err != nil {
+		todoLog.Debugf("Invalid prio %s", prio)
+		prioInt = 1000
+	}
+	return prioInt
+}
+
+// SetPrio set prio of this task
+func (t Task) SetPrio(prio int) {
+	t.Attr["prio"] = strconv.Itoa(prio)
 }

@@ -20,38 +20,34 @@ func TestToml(t *testing.T) {
 	[id1]
 	uri = "uri1"
 	type = "type"
-    key="value"
+    key1 = "value1"
     
 	[id2]
 	uri = "uri2"
 	type = "type"
-    key="value"
+    key2 = "value2"
     `))
 
 	if !assert.Nil(t, e) {
 		return
 	}
-	assert.Equal(t, config{
-		External: []ext.ExternalConfig{
-			ext.ExternalConfig{
-				ID:   "id1",
-				Type: "type",
-				URI:  "uri1",
-				Extra: map[string]string{
-					"key": "value",
-				},
-			},
-			ext.ExternalConfig{
-				ID:   "id2",
-				Type: "type",
-				URI:  "uri2",
-				Extra: map[string]string{
-					"key": "value",
-				},
-			},
+	assert.Contains(t, c.External, ext.ExternalConfig{
+		ID:   "id1",
+		Type: "type",
+		URI:  "uri1",
+		Extra: map[string]string{
+			"key1": "value1",
 		},
-		Repo: "repo",
-	}, c)
+	})
+	assert.Contains(t, c.External, ext.ExternalConfig{
+		ID:   "id2",
+		Type: "type",
+		URI:  "uri2",
+		Extra: map[string]string{
+			"key2": "value2",
+		},
+	})
+	assert.Equal(t, "repo", c.Repo)
 }
 
 func TestInvalidExternal(t *testing.T) {

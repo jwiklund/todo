@@ -19,8 +19,8 @@ func (s sorter) Swap(i, j int) {
 }
 
 func (s sorter) Less(i, j int) bool {
-	p1 := prio(s[i])
-	p2 := prio(s[j])
+	p1 := s[i].Prio()
+	p2 := s[j].Prio()
 
 	if p1 < p2 {
 		return true
@@ -30,15 +30,6 @@ func (s sorter) Less(i, j int) bool {
 	}
 
 	return id(s[i]) < id(s[j])
-}
-
-func prio(t todo.Task) int {
-	if p, ok := t.Attr["prio"]; ok {
-		if prio, err := strconv.Atoi(p); err == nil {
-			return prio
-		}
-	}
-	return 1000
 }
 
 func id(t todo.Task) int {
