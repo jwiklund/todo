@@ -29,7 +29,7 @@ func Prio(prio int) string {
 func renderList(ts []todo.Task, out io.Writer) {
 	w := tabwriter.NewWriter(os.Stdout, 6, 8, 1, ' ', 0)
 	for _, task := range ts {
-		fmt.Fprintf(w, "(%s)\t%s\t%s\n", task.ID, Prio(task.Prio()), task.State.String(), task.Message)
+		fmt.Fprintf(w, "(%s)\t%s\t%s\t%s\n", task.ID, Prio(task.Prio()), task.State.String(), task.Message)
 	}
 	w.Flush()
 }
