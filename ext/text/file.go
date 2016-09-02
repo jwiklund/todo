@@ -56,10 +56,10 @@ type text struct {
 }
 
 func (t *text) Handle(task todo.Task) (todo.Task, error) {
-	if a := task.Attr["external"]; a != t.id {
+	if t.id != task.External() {
 		return task, nil
 	}
-	if a := task.Attr[t.id+".id"]; a != "" {
+	if a := task.ExternalID(); a != "" {
 		ind, err := strconv.Atoi(a)
 		if err != nil {
 			textLog.Debugf("Invalid id attribute %s, ignoring %s", a, task.ID)
@@ -79,7 +79,7 @@ func (t *text) Handle(task todo.Task) (todo.Task, error) {
 		}
 	} else {
 		t.source = append(t.source, []byte(task.Message))
-		task.Attr[t.id+".id"] = strconv.Itoa(len(t.source) - 1)
+		task.SetExternalID(strconv.Itoa(len(t.source) - 1))
 		t.updated = true
 	}
 	return task, nil

@@ -11,7 +11,7 @@ func TestList(t *testing.T) {
 
 	r.Add("message", nil)
 
-	if ts, e := v.List(); assert.Nil(t, e) {
+	if ts, e := v.List(listAll); assert.Nil(t, e) {
 		if !assert.Equal(t, 1, len(ts)) {
 			return
 		}

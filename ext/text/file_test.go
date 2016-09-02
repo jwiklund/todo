@@ -61,7 +61,7 @@ func TestExistingAddSync(t *testing.T) {
 		return
 	}
 	assert.Equal(t, "message1\nmessage", str(target.source))
-	assert.Equal(t, "1", r.MustGet("0").Attr["text.id"])
+	assert.Equal(t, "1", r.MustGet("0").ExternalID())
 }
 
 func str(lines [][]byte) string {

@@ -23,3 +23,24 @@ func (t Task) Equal(t2 Task) bool {
 func (t Task) IsCurrent() bool {
 	return t.State == "todo" || t.State == "doing"
 }
+
+// External get external repo identifier, if present (else "")
+func (t Task) External() string {
+	ext, _ := t.Attr["external"]
+	return ext
+}
+
+// ExternalID get id in external repo, if present (else "")
+func (t Task) ExternalID() string {
+	ext := t.External()
+	extID, _ := t.Attr[ext+".id"]
+	return extID
+}
+
+// SetExternalID set external id if external is present
+func (t Task) SetExternalID(externalID string) {
+	if t.External() == "" {
+		return
+	}
+	t.Attr[t.External()+".id"] = externalID
+}
