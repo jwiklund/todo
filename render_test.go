@@ -29,7 +29,7 @@ func TestRenderOneAttr(t *testing.T) {
 			"key": "value",
 		},
 	}, &bs)
-	assert.Equal(t, "(0)   none  todo  message\n      key   value\n", bs.String())
+	assert.Equal(t, "(0)   none  done  message\n      key   value\n", bs.String())
 }
 
 func TestRenderList(t *testing.T) {

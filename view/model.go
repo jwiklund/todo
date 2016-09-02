@@ -71,11 +71,24 @@ func (t *view) Get(id string) (todo.Task, error) {
 	if err != nil {
 		return todo.Task{}, err
 	}
-	return t.repo.Get(aid)
+	raw, err := t.repo.Get(aid)
+	if err != nil {
+		return raw, err
+	}
+	rel, err := t.state.Remapp([]todo.Task{raw})
+	if err != nil {
+		return raw, err
+	}
+	return rel[0], nil
 }
 
-// Update uses task with absolute ID
+// Update uses task with relative ID
 func (t *view) Update(task todo.Task) error {
+	id, err := t.state.ToDB(task.ID)
+	if err != nil {
+		return err
+	}
+	task.ID = id
 	mod, err := t.ext.Handle(task)
 	if err != nil {
 		return err
