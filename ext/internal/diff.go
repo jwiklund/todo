@@ -41,3 +41,28 @@ func Compare(original, modified todo.Task) Change {
 	}
 	return change
 }
+
+// Apply change to task, modifies task
+func (c Change) Apply(original *todo.Task) {
+	for _, key := range c.Removed {
+		if key == "message" {
+			original.Message = ""
+		} else {
+			delete(original.Attr, key)
+		}
+	}
+	for key, value := range c.Modified {
+		if key == "message" {
+			original.Message = value
+		} else {
+			original.Attr[key] = value
+		}
+	}
+	for key, value := range c.Added {
+		if key == "message" {
+			original.Message = value
+		} else {
+			original.Attr[key] = value
+		}
+	}
+}
